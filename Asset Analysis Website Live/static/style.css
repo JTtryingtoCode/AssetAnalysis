@@ -1,0 +1,53 @@
+:root {
+    --bg-color: #ffffff;
+    --text-color: #000000;
+    --button-bg-color: #4CAF50;
+    --button-hover-bg-color: #45a049;
+    --content-bg-color: rgba(255, 255, 255, 0.8);
+    --table-header-bg-color: rgba(0, 0, 0, 0.1);
+    --table-body-bg-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark {
+    --bg-color: #2e2e2e;
+    --text-color: #ffffff;
+    --button-bg-color: #3e8e41;
+    --button-hover-bg-color: #36a342;
+    --content-bg-color: rgba(0, 0, 0, 0.5);
+    --table-header-bg-color: rgba(255, 255, 255, 0.2);
+    --table-body-bg-color: rgba(0, 0, 0, 0.2);
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+button {
+    background-color: var(--button-bg-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 10px;
+}
+
+button:hover {
+    background-color: var(--button-hover-bg-color);
+}
+
+h1 {
+    color: var(--text-color);
+}
+
+/* Add your existing styles here */
+form {
+    margin-bottom: 20px;
+}
+
+#result {
+    margin-top: 20px;
+    padding: 10px;
+    border: 1px solid #ddd;
+}
