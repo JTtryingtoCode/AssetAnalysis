@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sharpe Ratio Calculation</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         body {
             display: flex;
@@ -42,7 +43,7 @@
             text-align: center;
             display: none; /* Hide initially */
         }
-        #sharpeRatioImage {
+        #sharpeRatioGraph {
             display: none;
             max-width: 100%;
         }
@@ -75,7 +76,7 @@
         <button type="submit">Run</button>
     </form>
     <div id="result">
-        <img id="sharpeRatioImage" src="" alt="Sharpe Ratio Result">
+        <div id="sharpeRatioGraph"></div>
         <pre id="sharpeRatioText"></pre>
     </div>
     <div id="loading">
@@ -89,7 +90,7 @@
         document.getElementById('sharpeRatioForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const tickers = document.getElementById('tickers').value.split(',').map(ticker => ticker.trim().toUpperCase());
-            const img = document.getElementById('sharpeRatioImage');
+            const graphDiv = document.getElementById('sharpeRatioGraph');
             const text = document.getElementById('sharpeRatioText');
             const result = document.getElementById('result');
             const loading = document.getElementById('loading');
@@ -97,7 +98,7 @@
             // Show loading indicator and hide previous results
             loading.style.display = 'block';
             result.style.display = 'none';
-            img.style.display = 'none';
+            graphDiv.style.display = 'none';
             text.textContent = '';
 
             fetch('/run_sharpe_ratio', {
@@ -110,8 +111,8 @@
             .then(response => response.json())
             .then(data => {
                 loading.style.display = 'none';
-                img.src = 'data:image/png;base64,' + data.image;
-                img.style.display = 'block';
+                Plotly.newPlot('sharpeRatioGraph', JSON.parse(data.graph).data, JSON.parse(data.graph).layout);
+                graphDiv.style.display = 'block';
                 text.textContent = data.text;
                 result.style.display = 'block'; // Show the result div when data is ready
             })
