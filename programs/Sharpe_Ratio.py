@@ -1,21 +1,16 @@
 import yfinance as yf
 import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib import style, cm
 import numpy as np
-import io
-import base64
+import plotly.graph_objs as go
+import plotly.io as pio
 from datetime import datetime
 import logging
-
-style.use('ggplot')
-plt.switch_backend('Agg')  # Use non-interactive backend
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
 def run_sharpe_ratio(tickers):
-    start_date = '2007-01-01'
+    start_date = '1850-01-01'
     present_date = datetime.today().strftime('%Y-%m-%d')
     end_date = present_date
     RFR = 0.0535
@@ -112,28 +107,71 @@ def run_sharpe_ratio(tickers):
     text_output += f"Risk: {average_risk * 100:.2f}%\n"
     text_output += f"Sharpe Ratio: {average_sharpe:.2f}\n"
 
-    plt.figure(figsize=(10, 5))
-    plt.scatter(portfolio_risks, portfolio_returns, c=portfolio_returns / portfolio_risks, cmap='viridis')
-    plt.title(f"Optimized Portfolios for {', '.join(tickers)}", fontsize=15)
-    plt.xlabel("Volatility (Risk)", fontsize=15)
-    plt.ylabel("Returns", fontsize=15)
-    plt.xticks(fontsize=10)
-    plt.yticks(fontsize=10)
-    plt.colorbar(label='Sharpe Ratio')
-    plt.plot(max_sharpe['Risk'], max_sharpe['Return'], color='red', marker='*', label='Max Sharpe', linestyle='None', ms=15)
-    plt.plot(max_return['Risk'], max_return['Return'], color='red', marker='X', linestyle='None', label='Max Return', ms=15)
-    plt.plot(min_risk['Risk'], min_risk['Return'], color='red', marker='P', linestyle='None', label='Min Risk', ms=15)
-    plt.scatter(average_risk, average_return, color='magenta', marker='o', s=100, label='Average Portfolio')
-    plt.legend(loc='upper left', labelspacing=1)
+    scatter = go.Scatter(
+        x=portfolio_risks,
+        y=portfolio_returns,
+        mode='markers',
+        marker=dict(
+            size=7.5,
+            color=sharpe_ratios[1:],
+            colorscale='Viridis',
+            showscale=True,
+            colorbar=dict(title='Sharpe Ratio')
+        ),
+        text=[f"Weights: {weights}" for weights in portfolio_weights]
+    )
 
-    img_bytes = io.BytesIO()
-    plt.savefig(img_bytes, format='png')
-    img_bytes.seek(0)
-    plt.close()
+    max_sharpe_marker = go.Scatter(
+        x=[max_sharpe['Risk']],
+        y=[max_sharpe['Return']],
+        mode='markers',
+        marker=dict(color='red', size=15, symbol='star'),
+        name='Max Sharpe'
+    )
 
-    img_base64 = base64.b64encode(img_bytes.read()).decode('utf-8')
+    max_return_marker = go.Scatter(
+        x=[max_return['Risk']],
+        y=[max_return['Return']],
+        mode='markers',
+        marker=dict(color='blue', size=15, symbol='x'),
+        name='Max Return'
+    )
 
-    return {'image': img_base64, 'text': text_output}
+    min_risk_marker = go.Scatter(
+        x=[min_risk['Risk']],
+        y=[min_risk['Return']],
+        mode='markers',
+        marker=dict(color='green', size=15, symbol='triangle-up'),
+        name='Min Risk'
+    )
+
+    average_marker = go.Scatter(
+    x=[average_risk],
+    y=[average_return],
+    mode='markers',
+    marker=dict(color='magenta', size=15, symbol='circle'),
+    name='Average Portfolio'
+    )
+
+    layout = go.Layout(
+    title=dict(
+        text=f"Optimized Portfolios for {', '.join(tickers)}",
+        x=0.5,  # Center the title
+        xanchor='center'
+    ),
+    xaxis=dict(title="Volatility (Risk)"),
+    yaxis=dict(title="Returns"),
+    legend=dict(x=0, y=1),
+    hovermode='closest',
+    width=1000,  # Increase the width
+    height=600   # Increase the height
+)
+
+
+    fig = go.Figure(data=[scatter, max_sharpe_marker, max_return_marker, min_risk_marker, average_marker], layout=layout)
+    graph_json = pio.to_json(fig)
+
+    return {'graph': graph_json, 'text': text_output}
 
 if __name__ == '__main__':
     tickers = []
