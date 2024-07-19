@@ -33,12 +33,22 @@
             width: 90%;
             max-width: 1200px;
         }
-        iframe {
-            border: none;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
             width: 100%;
-            height: 800px;
+        }
+        label, input, button {
+            width: 100%;
+            max-width: 500px;
+        }
+        input, button {
+            padding: 10px;
+            border-radius: 4px;
+            border: none;
+            margin-top: 5px;
         }
         button {
             padding: 10px;
@@ -47,7 +57,6 @@
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            margin-top: 20px;
         }
         button:hover {
             background-color: #45a049;
@@ -58,11 +67,53 @@
             color: #fff;
         }
     </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('form').on('submit', function(e) {
+                e.preventDefault();
+
+                var tickers = $('#tickers').val();
+                var startDate = $('#start_date').val();
+                var monthlyInvestment = $('#monthly_investment').val();
+
+                $.ajax({
+                    url: '/generate_investment_growth_graph',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ tickers: tickers, start_date: startDate, monthly_investment: monthlyInvestment }),
+                    success: function(response) {
+                        if (response.error) {
+                            alert(response.error);
+                        } else {
+                            Plotly.newPlot('investment_graph', JSON.parse(response.graph).data, JSON.parse(response.graph).layout);
+                        }
+                    },
+                    error: function(xhr) {
+                        alert('Error: ' + xhr.responseText);
+                    }
+                });
+            });
+        });
+    </script>
 </head>
 <body>
     <h1>Investment Growth Calculation</h1>
     <div class="content">
-        <iframe src="/dash/"></iframe>
+        <form>
+            <label for="tickers">Enter Stock Tickers (comma-separated):</label>
+            <input type="text" id="tickers" name="tickers" placeholder="e.g. AAPL, MSFT, GOOGL" required>
+
+            <label for="start_date">Select Start Date:</label>
+            <input type="date" id="start_date" name="start_date" required>
+
+            <label for="monthly_investment">Monthly Investment Amount ($):</label>
+            <input type="number" id="monthly_investment" name="monthly_investment" value="100" min="1" step="1" required>
+
+            <button type="submit">Generate Graph</button>
+        </form>
+        <div id="investment_graph" style="width: 100%; height: 800px;"></div>
     </div>
     <button onclick="window.location.href='/'">Back to Home</button>
     <div class="footer">
