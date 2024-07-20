@@ -17,6 +17,8 @@
             background: linear-gradient(135deg, #72EDF2 10%, #5151E5 100%);
             color: white;
             text-align: center;
+            padding: 10px;
+            box-sizing: border-box;
         }
         h1 {
             margin-bottom: 20px;
@@ -61,6 +63,10 @@
         button:hover {
             background-color: #45a049;
         }
+        #investment_graph {
+            width: 100%;
+            height: 800px;
+        }
         .footer {
             margin-top: 20px;
             font-size: 0.8em;
@@ -87,7 +93,7 @@
                         if (response.error) {
                             alert(response.error);
                         } else {
-                            Plotly.newPlot('investment_graph', JSON.parse(response.graph).data, JSON.parse(response.graph).layout);
+                            Plotly.newPlot('investment_graph', JSON.parse(response.graph).data, JSON.parse(response.graph).layout, {responsive: true});
                         }
                     },
                     error: function(xhr) {
@@ -113,7 +119,7 @@
 
             <button type="submit">Generate Graph</button>
         </form>
-        <div id="investment_graph" style="width: 100%; height: 800px;"></div>
+        <div id="investment_graph"></div>
     </div>
     <button onclick="window.location.href='/'">Back to Home</button>
     <div class="footer">
