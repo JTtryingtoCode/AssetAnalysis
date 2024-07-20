@@ -107,8 +107,6 @@ def run_stock_linear_regression(stock_ticker, start_date):
     legend=dict(x=0, y=1),
     hovermode='closest',
     autosize=True,
-    width=1200,
-    height=700,
     margin=dict(l=40, r=40, b=40, t=40)
     )
 
