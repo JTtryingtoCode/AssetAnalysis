@@ -101,7 +101,11 @@ def create_dash_app(server):
         graph_figure = {
             'data': traces,
             'layout': go.Layout(
-                title=f'Stock Price Performance Since {title_date}',
+                title=dict(
+                    text=f'Stock Price Performance Since {title_date}',
+                    x=0.5,
+                    xanchor = 'center',
+                ),
                 xaxis={'title': 'Date'},
                 yaxis={'title': 'Price ($)', 'type': 'log'},
                 legend={'title': 'Company'},
