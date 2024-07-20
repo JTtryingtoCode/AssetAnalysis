@@ -163,10 +163,8 @@ def run_sharpe_ratio(tickers):
     yaxis=dict(title="Returns"),
     legend=dict(x=0, y=1),
     hovermode='closest',
-    width=1000,  # Increase the width
-    height=600   # Increase the height
+    autosize=True,
 )
-
 
     fig = go.Figure(data=[scatter, max_sharpe_marker, max_return_marker, min_risk_marker, average_marker], layout=layout)
     graph_json = pio.to_json(fig)
