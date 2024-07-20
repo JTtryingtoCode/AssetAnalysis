@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Price Performance</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="/static/style.css">
     <style>
         body {
             display: flex;
@@ -17,6 +17,8 @@
             background: linear-gradient(135deg, #72EDF2 10%, #5151E5 100%);
             color: white;
             text-align: center;
+            padding: 10px;
+            box-sizing: border-box;
         }
         h1 {
             margin-bottom: 20px;
@@ -30,8 +32,9 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            width: 90%;
-            max-width: 1200px;
+            width: 100%;
+            max-width: 1000px;
+            box-sizing: border-box;
         }
         form {
             display: flex;
@@ -61,10 +64,27 @@
         button:hover {
             background-color: #45a049;
         }
+        #stock_graph {
+            width: 100%;
+            height: auto;
+        }
         .footer {
             margin-top: 20px;
             font-size: 0.8em;
             color: #fff;
+        }
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2em;
+            }
+            form {
+                width: 100%;
+                max-width: 300px;
+                padding: 15px;
+            }
+            button {
+                padding: 8px;
+            }
         }
     </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -86,7 +106,7 @@
                         if (response.error) {
                             alert(response.error);
                         } else {
-                            Plotly.newPlot('stock_graph', JSON.parse(response.graph).data, JSON.parse(response.graph).layout);
+                            Plotly.newPlot('stock_graph', JSON.parse(response.graph).data, JSON.parse(response.graph).layout, {responsive: true});
                         }
                     },
                     error: function(xhr) {
@@ -109,7 +129,7 @@
 
             <button type="submit">Generate Graph</button>
         </form>
-        <div id="stock_graph" style="width: 100%; height: 800px;"></div>
+        <div id="stock_graph"></div>
     </div>
     <button onclick="window.location.href='/'">Back to Home</button>
     <div class="footer">
