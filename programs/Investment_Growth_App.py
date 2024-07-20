@@ -85,7 +85,11 @@ def generate_investment_growth_graph():
         aligned_data.append(trace)
 
     layout = go.Layout(
-        title=f'Growth of ${monthly_investment} Invested Monthly Since {earliest_common_date.strftime("%Y-%m-%d")}',
+        title=dict(
+            text=f'Growth of ${monthly_investment} Invested Monthly Since {earliest_common_date.strftime("%Y-%m-%d")}',
+            x=0.5,
+            xanchor='center'
+        ),
         xaxis=dict(title='Date'),
         yaxis=dict(title='Investment Value ($)', type='log', side='right'),
         legend=dict(x=0, y=1),
