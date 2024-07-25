@@ -21,8 +21,10 @@
             box-sizing: border-box;
         }
         h1 {
-            margin-bottom: 20px;
+            margin-top: 100px; /* Adjust this to accommodate the fixed header */
+            margin-bottom: 40px;
             font-size: 2.5em;
+            color: black;
         }
         .content {
             display: flex;
@@ -64,10 +66,6 @@
         button:hover {
             background-color: #45a049;
         }
-        #stock_graph {
-            width: 100%;
-            height: auto;
-        }
         .footer {
             margin-top: 20px;
             font-size: 0.8em;
@@ -106,7 +104,14 @@
                         if (response.error) {
                             alert(response.error);
                         } else {
-                            Plotly.newPlot('stock_graph', JSON.parse(response.graph).data, JSON.parse(response.graph).layout, {responsive: true});
+                            const graph = JSON.parse(response.graph);
+                            const contentDiv = document.querySelector('.content');
+                            const stockGraphDiv = document.createElement('div');
+                            stockGraphDiv.id = 'stock_graph';
+                            stockGraphDiv.style.width = '100%';
+                            stockGraphDiv.style.height = '800px';
+                            contentDiv.appendChild(stockGraphDiv);
+                            Plotly.newPlot('stock_graph', graph.data, graph.layout, {responsive: true});
                         }
                     },
                     error: function(xhr) {
@@ -118,6 +123,7 @@
     </script>
 </head>
 <body>
+    {% include 'header.html' %}
     <h1>Stock Price Performance</h1>
     <div class="content">
         <form>
@@ -129,7 +135,6 @@
 
             <button type="submit">Generate Graph</button>
         </form>
-        <div id="stock_graph"></div>
     </div>
     <button onclick="window.location.href='/'">Back to Home</button>
     <div class="footer">
