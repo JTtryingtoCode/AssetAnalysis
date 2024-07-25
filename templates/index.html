@@ -15,10 +15,13 @@
             margin: 0;
             font-family: Arial, sans-serif;
             background: linear-gradient(135deg, #72EDF2 10%, #5151E5 100%);
-            color: white;
+            color: black;
             text-align: center;
+            padding: 10px;
+            box-sizing: border-box;
         }
         h1 {
+            margin-top: 100px; /* Adjust this to accommodate the fixed header */
             margin-bottom: 40px;
             font-size: 2.5em;
         }
@@ -48,17 +51,70 @@
             color: #5151E5;
             background-color: #72EDF2;
         }
+        .message {
+            color: yellow;
+            margin-top: 20px;
+            opacity: 1;
+            transition: opacity 1s ease-out;
+        }
+        .fade-out {
+            opacity: 0;
+        }
     </style>
 </head>
 <body>
+    {% include 'header.html' %}
     <h1>Choose a Model to Run</h1>
     <nav>
         <ul>
+            <li><a href="portfolio_optimizer">Portfolio Optimizer</a></li>
             <li><a href="regression">Regression Models</a></li>
-            <li><a href="sharpe_ratio">Sharpe Ratio Calculation</a></li>
+            <li><a href="company_comparisons">Company Comparisons</a></li>
             <li><a href="stock_price_performance">Stock Performance Tracker</a></li>
-            <li><a href="investment_growth">Investment Growth Calculation</a></li>
+            <li><a href="investment_growth">Investment Growth Calculator</a></li>
         </ul>
     </nav>
+    <div class="message" id="message"></div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const headerRegressionLink = document.getElementById('header-regression-link');
+            const headerPortfolioOptimizerLink = document.getElementById('header-portfolio-optimizer-link');
+            const message = document.getElementById('header-message');
+
+            function showMessage(text) {
+                message.textContent = text;
+                message.classList.remove('fade-out');
+                setTimeout(() => {
+                    message.classList.add('fade-out');
+                }, 2000); // Start fading out after 2 seconds
+            }
+
+            headerRegressionLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                fetch('/check-subscription')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.subscription_status === 'paid') {
+                            window.location.href = "/regression";
+                        } else {
+                            showMessage("Paid Subscription Needed");
+                        }
+                    });
+            });
+
+            headerSharpeLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                fetch('/check-subscription')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.subscription_status === 'paid') {
+                            window.location.href = "/portfolio_optimizer";
+                        } else {
+                            showMessage("Paid Subscription Needed");
+                        }
+                    });
+            });
+        });
+    </script>
 </body>
 </html>
