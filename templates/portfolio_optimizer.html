@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Regression Models</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #72EDF2 10%, #5151E5 100%);
+            color: white;
+            text-align: center;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        h1 {
+            margin-top: 100px; /* Adjust this to accommodate the fixed header */
+            margin-bottom: 40px;
+            font-size: 2.5em;
+            color: black;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            box-sizing: border-box;
+        }
+        label, select, input, button {
+            margin: 10px 0;
+            width: 100%;
+        }
+        #result {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 1600px;
+            justify-content: center;
+            align-items: center;
+            display: none;
+        }
+        pre {
+            text-align: left;
+            white-space: pre-wrap;
+        }
+        button {
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .ticker-table {
+            margin-top: 20px;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            box-sizing: border-box;
+        }
+        .ticker-table table {
+            width: 100%;
+            border-collapse: collapse;
+            color: white;
+        }
+        .ticker-table th, .ticker-table td {
+            padding: 10px;
+            border: 1px solid white;
+            text-align: center;
+        }
+        .ticker-table th {
+            background-color: #5151E5;
+        }
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2em;
+                margin-top: 70px; /* Adjust this to accommodate the fixed header */
+            }
+            form {
+                width: 100%;
+                max-width: 300px;
+                padding: 15px;
+            }
+            button {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% include 'header.html' %}
+    <h1>Regression Models</h1>
+    <form id="regressionForm">
+        <label for="stock">Enter Stock Ticker:</label>
+        <input type="text" id="stock" name="stock">
+
+        <div id="start_date_container">
+            <label for="start_date">Select Start Date:</label>
+            <select id="start_date" name="start_date">
+                <option value="ipo">IPO</option>
+                <option value="2007-01-01">GFC</option>
+            </select>
+        </div>
+
+        <button type="submit">Run</button>
+    </form>
+    <div class="ticker-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Index</th>
+                    <th>Ticker</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>S&P 500</td>
+                    <td>^SPX or ^GSPC</td>
+                </tr>
+                <tr>
+                    <td>Nasdaq 100</td>
+                    <td>^NDX or ^IXIC</td>
+                </tr>
+                <tr>
+                    <td>Dow Jones</td>
+                    <td>^DJI</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="ticker-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Cryptocurrency</th>
+                    <th>Ticker</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Bitcoin</td>
+                    <td>BTC-USD</td>
+                </tr>
+                <tr>
+                    <td>Ethereum</td>
+                    <td>ETH-USD</td>
+                </tr>
+                <tr>
+                    <td>Solana</td>
+                    <td>SOL-USD</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div id="result"></div>
+    <button onclick="window.location.href='/'">Back to Home</button>
+    <script>
+        document.getElementById('regressionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const stock = document.getElementById('stock').value.toUpperCase();
+            const start_date = document.getElementById('start_date').value;
+
+            const data = {
+                stock: stock,
+                start_date: start_date
+            };
+
+            fetch('/run_regression', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                const graph = JSON.parse(data.graph);
+                const resultDiv = document.getElementById('result');
+                const regressionPlotDiv = document.createElement('div');
+                regressionPlotDiv.id = 'regressionPlot';
+                regressionPlotDiv.style.width = '100%';
+                regressionPlotDiv.style.height = '800px';
+                resultDiv.innerHTML = '';  // Clear previous plot if any
+                resultDiv.appendChild(regressionPlotDiv);
+                Plotly.newPlot('regressionPlot', graph.data, graph.layout, {responsive: true});
+                
+                result.style.display = 'block'; // Show the result div when data is ready
+
+                // Force a resize to fill the entire space
+                window.dispatchEvent(new Event('resize'));
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    </script>
+</body>
+</html>
