@@ -7,6 +7,13 @@
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 10px;
+            box-sizing: border-box;
+        }
         body {
             display: flex;
             flex-direction: column;
@@ -22,8 +29,10 @@
             box-sizing: border-box;
         }
         h1 {
-            margin-bottom: 20px;
+            margin-top: 100px; /* Adjust this to accommodate the fixed header */
+            margin-bottom: 40px;
             font-size: 2.5em;
+            color: black;
         }
         form {
             display: flex;
@@ -44,14 +53,10 @@
         #result {
             margin-top: 20px;
             width: 100%;
-            max-width: 1000px;
-            display: flex;
+            max-width: 1600px;
             justify-content: center;
             align-items: center;
-        }
-        #regressionPlot {
-            width: 100%;
-            height: auto;
+            display: none;
         }
         pre {
             text-align: left;
@@ -64,6 +69,7 @@
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            margin-top: 20px;
         }
         button:hover {
             background-color: #45a049;
@@ -94,6 +100,7 @@
         @media (max-width: 600px) {
             h1 {
                 font-size: 2em;
+                margin-top: 70px; /* Adjust this to accommodate the fixed header */
             }
             form {
                 width: 100%;
@@ -107,6 +114,7 @@
     </style>
 </head>
 <body>
+    {% include 'header.html' %}
     <h1>Regression Models</h1>
     <form id="regressionForm">
         <label for="stock">Enter Stock Ticker:</label>
@@ -170,9 +178,7 @@
             </tbody>
         </table>
     </div>
-    <div id="result">
-        <div id="regressionPlot"></div>
-    </div>
+    <div id="result"></div>
     <button onclick="window.location.href='/'">Back to Home</button>
     <script>
         document.getElementById('regressionForm').addEventListener('submit', function(e) {
@@ -195,7 +201,19 @@
             .then(response => response.json())
             .then(data => {
                 const graph = JSON.parse(data.graph);
+                const resultDiv = document.getElementById('result');
+                const regressionPlotDiv = document.createElement('div');
+                regressionPlotDiv.id = 'regressionPlot';
+                regressionPlotDiv.style.width = '100%';
+                regressionPlotDiv.style.height = '800px';
+                resultDiv.innerHTML = '';  // Clear previous plot if any
+                resultDiv.appendChild(regressionPlotDiv);
                 Plotly.newPlot('regressionPlot', graph.data, graph.layout, {responsive: true});
+                
+                result.style.display = 'block'; // Show the result div when data is ready
+
+                // Force a resize to fill the entire space
+                window.dispatchEvent(new Event('resize'));
             })
             .catch(error => {
                 console.error('Error:', error);
