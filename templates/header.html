@@ -1,0 +1,159 @@
+<div class="header">
+    <div class="header-container">
+        <div class="header-left">
+            <a href="/">Asset Analysis</a>
+        </div>
+        <div class="header-middle">
+            <div class="dropdown">
+                <button class="dropbtn">Models</button>
+                <div class="dropdown-content">
+                    <a href="portfolio_optimizer">Portfolio Optimizer</a>
+                    <a href="/regression">Regression Models</a>
+                    <a href="/company_comparisons">Company Comparisons</a>
+                    <a href="/stock_price_performance">Stock Performance Tracker</a>
+                    <a href="/investment_growth">Investment Growth Calculator</a>
+                </div>
+            </div>
+        </div>
+        <div class="header-right">
+            {% if current_user.is_authenticated %}
+                <a href="/profile">Welcome, {{ current_user.email }}</a>
+                <a href="/logout">Logout</a>
+            {% else %}
+                <a href="/login">Login/Register</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+    }
+
+    .header {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        background-color: rgba(0, 0, 0, 0.7);
+        padding: 10px 0;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        background: none;
+        box-shadow: none;
+    }
+
+    .header-container {
+        width: 100%;
+        max-width: 1200px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 20px;
+    }
+
+    .header a, .dropbtn {
+        color: white;
+        text-decoration: none;
+        font-size: 1em;
+        font-weight: bold;
+        padding: 10px;
+        border-radius: 5px;
+        background-color: rgba(0, 0, 0, 0.5);
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+        transition: background-color 0.3s;
+        white-space: nowrap;
+        text-align: center;
+        flex-grow: 1;
+        flex-basis: 0;
+    }
+
+    .header a:hover, .dropbtn:hover {
+        background-color: #72EDF2;
+        color: #5151E5;
+    }
+
+    .dropdown-content {
+        display: none;
+        position: absolute;
+        justify-content: center;
+        left: 50%;
+        transform: translateX(-50%);
+        box-shadow: none;
+        z-index: 1;
+        font-size: 0.9em;
+    }
+
+    .dropdown-content a {
+        color: white;
+        padding: 10px;
+        text-decoration: none;
+        display: block;
+        background-color: rgba(0, 0, 0, 0.5);
+        transition: background-color 0.3s;
+    }
+
+    .dropdown-content a:hover {
+        background-color: #72EDF2;
+        color: #5151E5;
+    }
+
+    .dropdown:hover .dropdown-content {
+        display: block;
+    }
+
+    @media (max-width: 600px) {
+        .header-container {
+            padding: 0 10px;
+        }
+
+        .header a, .dropbtn {
+            font-size: 0.8em;
+            padding: 5px;
+        }
+
+        .dropdown-content a {
+            font-size: 0.8em;
+            padding: 5px;
+        }
+    }
+
+    @media (min-width: 601px) and (max-width: 1024px) {
+        .header-container {
+            padding: 0 15px;
+        }
+
+        .header a, .dropbtn {
+            font-size: 0.9em;
+            padding: 8px;
+        }
+
+        .dropdown-content a {
+            font-size: 0.9em;
+            padding: 8px;
+        }
+    }
+
+    @media (min-width: 1025px) {
+        .header-container {
+            padding: 0 20px;
+        }
+
+        .header a, .dropbtn {
+            font-size: 1em;
+            padding: 10px;
+        }
+
+        .dropdown-content a {
+            font-size: 1em;
+            padding: 10px;
+        }
+    }
+</style>

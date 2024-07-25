@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #72EDF2 10%, #5151E5 100%);
+            color: white;
+            text-align: center;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 500px;
+        }
+        input, button, select {
+            width: 100%;
+            max-width: 500px;
+            padding: 10px;
+            border-radius: 4px;
+            border: none;
+            margin-top: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .cancel-button {
+            background-color: #FF6347;
+        }
+        .cancel-button:hover {
+            background-color: #FF4500;
+        }
+        .confirmation {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    {% include 'header.html' %}
+    <h1>Profile</h1>
+    <div class="container">
+        <p>Welcome, {{ user.email }}!</p>
+        <p>Your current subscription: <span id="subscription-status">{{ user.subscription_status }}</span></p>
+        <form id="subscription-form">
+            <label for="subscription">Change Subscription:</label>
+            <select name="subscription" id="subscription">
+                <option value="Free" {% if user.subscription_status == 'Free' %}selected{% endif %}>Free</option>
+                <option value="monthly" {% if user.subscription_status == 'monthly' %}selected{% endif %}>Monthly $10/month</option>
+                <option value="yearly" {% if user.subscription_status == 'yearly' %}selected{% endif %}>Yearly $100/year</option>
+            </select>
+            <button type="button" id="update-subscription">Update Subscription</button>
+        </form>
+        {% if user.subscription_status != 'Free' %}
+        <button id="cancel-subscription" class="cancel-button">Cancel Subscription</button>
+        <div id="confirmation" class="confirmation">
+            <label><input type="checkbox" id="confirm-checkbox"> Are you sure?</label>
+            <button id="confirm-cancel" class="cancel-button" disabled>Confirm Cancel</button>
+        </div>
+        {% endif %}
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('update-subscription').addEventListener('click', function() {
+                const selectedPlan = document.getElementById('subscription').value;
+                let paymentLink = '';
+
+                if (selectedPlan === 'monthly') {
+                    paymentLink = 'https://buy.stripe.com/14kcQTaZlbEVgGk6op'; // Replace with your actual Stripe payment link for monthly
+                } else if (selectedPlan === 'yearly') {
+                    paymentLink = 'https://buy.stripe.com/eVacQTd7tfVbdu87ss'; // Replace with your actual Stripe payment link for yearly
+                }
+
+                if (paymentLink) {
+                    window.location.href = paymentLink;
+                } else if (selectedPlan === 'Free') {
+                    fetch('/change_subscription', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ subscription: 'Free' })
+                    }).then(response => {
+                        if (response.ok) {
+                            window.location.reload();
+                        }
+                    });
+                }
+            });
+
+            const cancelSubscriptionButton = document.getElementById('cancel-subscription');
+            const confirmationDiv = document.getElementById('confirmation');
+            const confirmCheckbox = document.getElementById('confirm-checkbox');
+            const confirmCancelButton = document.getElementById('confirm-cancel');
+
+            cancelSubscriptionButton.addEventListener('click', function() {
+                confirmationDiv.style.display = 'flex';
+            });
+
+            confirmCheckbox.addEventListener('change', function() {
+                confirmCancelButton.disabled = !confirmCheckbox.checked;
+            });
+
+            confirmCancelButton.addEventListener('click', function() {
+                fetch('/cancel_subscription', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }).then(() => {
+                    window.location.href = '/subscription_cancelled';
+                });
+            });
+
+            // Fetch updated subscription status when the page loads
+            fetch('/check_subscription').then(response => response.json()).then(data => {
+                document.getElementById('subscription-status').textContent = data.subscription_status;
+            });
+        });
+    </script>
+</body>
+</html>
