@@ -152,8 +152,8 @@ def stripe_webhook():
 
 
 @app.route('/regression')
-@login_required
-@subscription_required
+#@login_required
+#@subscription_required
 def regression():
     return render_template('regression.html')
 
@@ -174,8 +174,8 @@ def run_regression():
     return jsonify({"graph": graph_json})
 
 @app.route('/portfolio_optimizer')
-@login_required
-@subscription_required
+#@login_required
+#@subscription_required
 def sharpe_ratio():
     return render_template('portfolio_optimizer.html')
 
@@ -200,44 +200,8 @@ def run_sharpe_ratio():
 def investment_growth():
     return render_template('investment_growth.html')
 
-def calculate_investment_growth(ticker, start_date, monthly_investment):
-    stock_data = yf.download(ticker, start=start_date)
-    
-    if stock_data.empty:
-        return None, None, None, None, None
-
-    stock_data['Price'] = stock_data['Adj Close']
-    
-    stock_data = stock_data.ffill().interpolate()
-    stock_data = stock_data.resample('D').first().ffill()
-    first_valid_date = stock_data.index.min()
-    stock_data = stock_data[stock_data.index >= first_valid_date]
-    start_date = max(pd.to_datetime(start_date), first_valid_date)
-    stock_data['Investment Value'] = 0
-    current_investment = 0
-
-    first_trading_days = []
-    for i in range(len(stock_data)):
-        date = stock_data.index[i]
-        if i == 0 or (date.month != stock_data.index[i-1].month and date >= start_date):
-            first_trading_days.append(date)
-    
-    for month in first_trading_days:
-        if month >= start_date:
-            monthly_start_price = stock_data.loc[month, 'Price']
-            current_investment += monthly_investment
-            stock_data.loc[month:, 'Investment Value'] += (monthly_investment / monthly_start_price) * stock_data.loc[month:, 'Price']
-            if month == first_trading_days[0]:
-                stock_data.loc[month, 'Investment Value'] = monthly_investment
-
-    final_amount = stock_data['Investment Value'].iloc[-1]
-    total_investment = len(first_trading_days) * monthly_investment
-    percent_change = ((final_amount - total_investment) / total_investment) * 100
-
-    return stock_data['Investment Value'], total_investment, percent_change, first_valid_date
-
-@app.route('/generate_investment_growth_graph', methods=['POST'])
-def generate_investment_growth_graph():
+@app.route('/run_investment_growth', methods=['POST'])
+def run_investment_growth():
     tickers = request.json.get('tickers')
     start_date = request.json.get('start_date')
     monthly_investment = request.json.get('monthly_investment')
@@ -245,46 +209,15 @@ def generate_investment_growth_graph():
     if not tickers or not start_date or not monthly_investment:
         return jsonify({"error": "Please provide valid tickers, start date, and monthly investment."}), 400
 
-    tickers_list = [ticker.strip().upper() for ticker in tickers.split(',')]
-    start_date = pd.Timestamp(start_date)
-    monthly_investment = float(monthly_investment)
+    script_path = os.path.join(BASE_DIR, 'programs', 'Investment_Growth.py')
+    spec = importlib.util.spec_from_file_location("investment_growth", script_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    func = getattr(module, 'run_investment_growth')
 
-    # Determine the earliest common start date
-    earliest_common_date = pd.Timestamp('2100-01-01')
-    data = []
-    for ticker in tickers_list:
-        investment_growth, total_investment, percent_change, first_valid_date = calculate_investment_growth(ticker, start_date, monthly_investment)
-        if investment_growth is not None:
-            earliest_common_date = min(earliest_common_date, first_valid_date)
-            trace = go.Scatter(
-                x=investment_growth.index,
-                y=investment_growth,
-                mode='lines',
-                name=ticker
-            )
-            data.append((trace, investment_growth))
+    graph_json, summary, cumulative_investment, cumulative_total_value = func(tickers, start_date, monthly_investment)
+    return jsonify({"graph": graph_json, "summary": summary, "cumulative_investment": cumulative_investment, "cumulative_total_value": cumulative_total_value})
 
-    # Align all investment growth data to the earliest common date
-    aligned_data = []
-    for trace, investment_growth in data:
-        aligned_growth = investment_growth[investment_growth.index >= earliest_common_date]
-        aligned_growth.iloc[0] = monthly_investment  # Ensure initial value is the monthly investment
-        trace['x'] = aligned_growth.index
-        trace['y'] = aligned_growth
-        aligned_data.append(trace)
-
-    layout = go.Layout(
-        title=f'Growth of ${monthly_investment} Invested Monthly Since {earliest_common_date.strftime("%Y-%m-%d")}',
-        xaxis=dict(title='Date'),
-        yaxis=dict(title='Investment Value ($)', type='log', side='right'),
-        legend=dict(x=0, y=1),
-        hovermode='closest'
-    )
-
-    fig = go.Figure(data=aligned_data, layout=layout)
-    graph_json = pio.to_json(fig)
-
-    return jsonify({"graph": graph_json})
 
 @app.route('/stock_price_performance')
 def stock_price_performance():
@@ -335,8 +268,8 @@ def run_script(script_path, function_name, stock, start_date):
     return func(stock, start_date)
 
 @app.route('/company_comparisons')
-@login_required
-@subscription_required
+#@login_required
+#@subscription_required
 def company_comparisons():
     return render_template('company_comparisons.html')
 
