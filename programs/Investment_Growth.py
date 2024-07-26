@@ -2,9 +2,6 @@ import yfinance as yf
 import pandas as pd
 import plotly.graph_objs as go
 import plotly.io as pio
-from flask import Flask, request, jsonify, render_template
-
-app = Flask(__name__)
 
 def calculate_investment_growth(ticker, start_date, monthly_investment):
     stock_data = yf.download(ticker, start=start_date)
@@ -40,22 +37,9 @@ def calculate_investment_growth(ticker, start_date, monthly_investment):
     total_investment = len(first_trading_days) * monthly_investment
     percent_change = ((final_amount - total_investment) / total_investment) * 100
 
-    return stock_data['Investment Value'], total_investment, percent_change, first_valid_date
+    return stock_data['Investment Value'], total_investment, percent_change, first_valid_date, final_amount
 
-
-@app.route('/')
-def index():
-    return render_template('investment_growth.html')
-
-@app.route('/generate_investment_growth_graph', methods=['POST'])
-def generate_investment_growth_graph():
-    tickers = request.json.get('tickers')
-    start_date = request.json.get('start_date')
-    monthly_investment = request.json.get('monthly_investment')
-
-    if not tickers or not start_date or not monthly_investment:
-        return jsonify({"error": "Please provide valid tickers, start date, and monthly investment."}), 400
-
+def run_investment_growth(tickers, start_date, monthly_investment):
     tickers_list = [ticker.strip().upper() for ticker in tickers.split(',')]
     start_date = pd.Timestamp(start_date)
     monthly_investment = float(monthly_investment)
@@ -63,8 +47,11 @@ def generate_investment_growth_graph():
     # Determine the earliest common start date
     earliest_common_date = pd.Timestamp('2100-01-01')
     data = []
+    summary = []
+    cumulative_investment = 0
+    cumulative_total_value = 0
     for ticker in tickers_list:
-        investment_growth, total_investment, percent_change, first_valid_date = calculate_investment_growth(ticker, start_date, monthly_investment)
+        investment_growth, total_investment, percent_change, first_valid_date, final_amount = calculate_investment_growth(ticker, start_date, monthly_investment)
         if investment_growth is not None:
             earliest_common_date = min(earliest_common_date, first_valid_date)
             trace = go.Scatter(
@@ -74,8 +61,15 @@ def generate_investment_growth_graph():
                 name=ticker
             )
             data.append((trace, investment_growth))
+            summary.append({
+                "ticker": ticker,
+                "total_investment": f"${total_investment:,.2f}",
+                "final_amount": f"${final_amount:,.2f}"
+            })
+            cumulative_investment += total_investment
+            cumulative_total_value += final_amount
 
-    # Align all investment growth data to the earliest common date
+    # Align all investment growth data to the earliest common start date
     aligned_data = []
     for trace, investment_growth in data:
         aligned_growth = investment_growth[investment_growth.index >= earliest_common_date]
@@ -86,7 +80,7 @@ def generate_investment_growth_graph():
 
     layout = go.Layout(
         title=dict(
-            text=f'Growth of ${monthly_investment} Invested Monthly Since {earliest_common_date.strftime("%Y-%m-%d")}',
+            text=f'Growth of ${monthly_investment:,.2f} Invested Monthly Since {earliest_common_date.strftime("%Y-%m-%d")}',
             x=0.5,
             xanchor='center'
         ),
@@ -99,4 +93,4 @@ def generate_investment_growth_graph():
     fig = go.Figure(data=aligned_data, layout=layout)
     graph_json = pio.to_json(fig)
 
-    return jsonify({"graph": graph_json})
+    return graph_json, summary, f"${cumulative_investment:,.2f}", f"${cumulative_total_value:,.2f}"
