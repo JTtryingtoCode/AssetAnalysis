@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Finance</title>
+    <title>Asset Analysis</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="/static/images/assetanalysis.ico" type="image/x-icon">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+        
         body {
             display: flex;
             flex-direction: column;
@@ -13,52 +16,94 @@
             justify-content: center;
             min-height: 100vh;
             margin: 0;
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #72EDF2 10%, #5151E5 100%);
-            color: black;
+            font-family: 'Roboto', Arial, sans-serif;
+            background: linear-gradient(135deg, #72EDF2, #5151E5);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: white;
             text-align: center;
             padding: 10px;
             box-sizing: border-box;
+            overflow: hidden;
         }
+
         h1 {
-            margin-top: 100px; /* Adjust this to accommodate the fixed header */
+            margin-top: 60px;
             margin-bottom: 40px;
-            font-size: 2.5em;
+            font-size: 3em;
+            letter-spacing: 2px;
+            animation: fadeIn 2s ease-in-out;
+            color: black;
         }
+
         nav {
             background-color: rgba(0, 0, 0, 0.5);
             padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            animation: slideIn 2s ease-in-out;
         }
+
         ul {
             list-style-type: none;
             padding: 0;
         }
+
         li {
             margin: 20px 0;
         }
+
         a {
             text-decoration: none;
             color: white;
-            font-size: 1.2em;
+            font-size: 1.5em;
             font-weight: bold;
-            transition: color 0.3s, background-color 0.3s;
+            transition: color 0.3s, background-color 0.3s, transform 0.3s;
             padding: 10px 20px;
-            border-radius: 5px;
+            border-radius: 10px;
         }
+
         a:hover {
             color: #5151E5;
             background-color: #72EDF2;
+            transform: scale(1.1);
         }
+
         .message {
             color: yellow;
             margin-top: 20px;
             opacity: 1;
             transition: opacity 1s ease-out;
         }
+
         .fade-out {
             opacity: 0;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
     </style>
 </head>
@@ -102,7 +147,7 @@
                     });
             });
 
-            headerSharpeLink.addEventListener('click', function(e) {
+            headerPortfolioOptimizerLink.addEventListener('click', function(e) {
                 e.preventDefault();
                 fetch('/check-subscription')
                     .then(response => response.json())
