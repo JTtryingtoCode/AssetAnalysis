@@ -1,8 +1,10 @@
 body {
     margin: 0;
     padding: 0;
-    font-family: Arial, sans-serif;
-    background: linear-gradient(135deg, #72EDF2 10%, #5151E5 100%);
+    font-family: 'Roboto', Arial, sans-serif;
+    background: linear-gradient(135deg, #72EDF2, #5151E5);
+    background-size: 400% 400%;
+    animation: gradientBG 15s ease infinite;
     color: white;
     text-align: center;
     padding-top: 60px; /* Adjust this to accommodate the fixed header */
@@ -126,4 +128,10 @@ body {
         font-size: 1em;
         padding: 10px;
     }
+}
+
+@keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
