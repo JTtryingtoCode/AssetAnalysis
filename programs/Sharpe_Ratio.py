@@ -33,6 +33,7 @@ def run_sharpe_ratio(tickers):
     if returns.empty:
         raise ValueError("No valid data fetched for the tickers provided.")
 
+    
     portfolio_returns = []
     portfolio_risks = []
     sharpe_ratios = []
