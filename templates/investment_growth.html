@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Investment Growth Calculator</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="/static/images/assetanalysis.ico" type="image/x-icon">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
         body {
             display: flex;
             flex-direction: column;
@@ -19,14 +22,16 @@
             text-align: center;
             padding: 10px;
             box-sizing: border-box;
+            animation: gradientBG 15s ease infinite;
         }
         h1 {
             margin-top: 100px; /* Adjust this to accommodate the fixed header */
             margin-bottom: 40px;
             font-size: 2.5em;
             color: black;
+            animation: fadeIn 2s ease-in-out;
         }
-        .content {
+        .content, .add-more-content {
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -37,6 +42,7 @@
             width: 100%;
             max-width: 1000px;
             box-sizing: border-box;
+            margin-bottom: 20px;
         }
         form {
             display: flex;
@@ -44,32 +50,71 @@
             align-items: center;
             gap: 10px;
             width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
         }
         label, input, button {
             width: 100%;
-            max-width: 500px;
-        }
-        input, button {
             padding: 10px;
             border-radius: 4px;
             border: none;
-            margin-top: 5px;
+            margin-bottom: 15px;
         }
         button {
-            padding: 10px;
+            margin-top: 20px;
             background-color: #4CAF50;
             color: white;
-            border: none;
-            border-radius: 4px;
             cursor: pointer;
         }
         button:hover {
             background-color: #45a049;
+            transform: scale(1.05);
+        }
+        #investment_graph {
+            width: 100%;
+            max-width: 1000px;
+            height: 800px;
+            margin-bottom: 20px; /* Add some space below the graph */
+        }
+        .summary {
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 1000px;
+            box-sizing: border-box;
+            margin-top: 20px;
+            color: white;
+        }
+        .summary-item {
+            margin-bottom: 10px;
         }
         .footer {
             margin-top: 20px;
             font-size: 0.8em;
             color: #fff;
+        }
+        #backButton {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        #backButton:hover {
+            background-color: #45a049;
+            transform: scale(1.05);
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
         }
         @media (max-width: 600px) {
             h1 {
@@ -97,7 +142,7 @@
                 var monthlyInvestment = $('#monthly_investment').val();
 
                 $.ajax({
-                    url: '/generate_investment_growth_graph',
+                    url: '/run_investment_growth',
                     method: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify({ tickers: tickers, start_date: startDate, monthly_investment: monthlyInvestment }),
@@ -106,13 +151,27 @@
                             alert(response.error);
                         } else {
                             const graph = JSON.parse(response.graph);
-                            const contentDiv = document.querySelector('.content');
-                            const investmentGraphDiv = document.createElement('div');
-                            investmentGraphDiv.id = 'investment_graph';
-                            investmentGraphDiv.style.width = '100%';
-                            investmentGraphDiv.style.height = '800px';
-                            contentDiv.appendChild(investmentGraphDiv);
-                            Plotly.newPlot('investment_graph', graph.data, graph.layout, {responsive: true});
+                            const summary = response.summary;
+                            const cumulativeInvestment = response.cumulative_investment;
+                            const cumulativeTotal = response.cumulative_total_value;
+                            const investmentGraphDiv = document.getElementById('investment_graph');
+                            investmentGraphDiv.style.display = 'block';
+                            Plotly.newPlot('investment_graph', graph.data, {
+                                ...graph.layout,
+                                yaxis: {
+                                    ...graph.layout.yaxis,
+                                    type: 'log'
+                                }
+                            }, {responsive: true});
+
+                            let summaryHtml = '<h3>Investment Summary</h3>';
+                            summary.forEach(item => {
+                                summaryHtml += `<div class="summary-item"><strong>${item.ticker}</strong>: Total Investment: ${item.total_investment}, Present Value: ${item.final_amount}</div>`;
+                            });
+                            summaryHtml += `<div class="summary-item" style="margin-top: 20px;"><strong>Cumulative Investment</strong>: ${cumulativeInvestment}</div>`;
+                            summaryHtml += `<div class="summary-item"><strong>Cumulative Total</strong>: ${cumulativeTotal}</div>`;
+                            document.getElementById('summary').innerHTML = summaryHtml;
+                            document.getElementById('summary').style.display = 'block';
                         }
                     },
                     error: function(xhr) {
@@ -140,7 +199,9 @@
             <button type="submit">Generate Graph</button>
         </form>
     </div>
-    <button onclick="window.location.href='/'">Back to Home</button>
+    <div id="investment_graph" style="display: none;"></div>
+    <div id="summary" class="summary" style="display: none;"></div>
+    <button id="backButton" onclick="window.location.href='/'">Back to Home</button>
     <div class="footer">
         Investment Tracker © 2024
     </div>
