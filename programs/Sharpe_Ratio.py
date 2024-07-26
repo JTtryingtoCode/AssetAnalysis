@@ -1,178 +1,136 @@
-import yfinance as yf
+import dash
+from dash import dcc, html
+from dash.dependencies import Input, Output, State
 import pandas as pd
-import numpy as np
 import plotly.graph_objs as go
-import plotly.io as pio
-from datetime import datetime
-import logging
+import yfinance as yf
 
-# Setup logging
-logging.basicConfig(level=logging.INFO)
+def create_dash_app(server):
+    dash_app = dash.Dash(__name__, server=server, url_base_pathname='/dash/')
 
-def run_sharpe_ratio(tickers):
-    start_date = '1850-01-01'
-    present_date = datetime.today().strftime('%Y-%m-%d')
-    end_date = present_date
-    RFR = 0.0535
-    no_of_simulations = 5000
+    def fetch_stock_data(ticker, start_date):
+        stock_data = yf.download(ticker, start=start_date)
+        if stock_data.empty:
+            return None, None
+        stock_data['Price'] = stock_data['Adj Close']
+        stock_data = stock_data.ffill().interpolate()
+        first_valid_date = stock_data.index.min()
+        return stock_data['Price'], first_valid_date
 
-    returns = pd.DataFrame()
-    for ticker in tickers:
-        stock = yf.Ticker(ticker)
-        try:
-            hist = stock.history(start=start_date, end=end_date)
-            hist[ticker] = hist['Close'].pct_change()
-            if returns.empty:
-                returns = hist[[ticker]]
-            else:
-                returns = returns.join(hist[[ticker]], how='outer')
-            logging.info(f"Fetched data for {ticker}")
-        except Exception as e:
-            logging.error(f"Could not fetch data for {ticker}: {e}")
+    def update_data(tickers, start_date):
+        price_data = pd.DataFrame()
+        valid_tickers = []
+        first_trading_days_dict = {}
 
-    if returns.empty:
-        raise ValueError("No valid data fetched for the tickers provided.")
-
-    
-    portfolio_returns = []
-    portfolio_risks = []
-    sharpe_ratios = []
-    portfolio_weights = []
-
-    for portfolio in range(no_of_simulations):
-        weights = np.random.random_sample(len(tickers))
-        weights = weights / np.sum(weights)
-        weights = np.round(weights, 3)
-        weight_dict = {tickers[i]: weights[i] for i in range(len(tickers))}
-        portfolio_weights.append(weight_dict)
+        for ticker in tickers:
+            stock_prices, first_valid_date = fetch_stock_data(ticker, start_date)
+            if stock_prices is not None and not stock_prices[start_date:].isna().all():
+                price_data = pd.concat([price_data, stock_prices], axis=1)
+                valid_tickers.append(ticker)
+                first_trading_days_dict[ticker] = first_valid_date
         
-        annualized_return = np.sum(returns.mean() * weights) * 365
-        portfolio_returns.append(annualized_return)
+        if not price_data.empty:
+            price_data.columns = valid_tickers
+            price_data = price_data.ffill().bfill()
         
-        matrix_covariance = returns.cov() * 365
-        portfolio_variance = np.dot(weights.T, np.dot(matrix_covariance, weights))
-        portfolio_stdv = np.sqrt(portfolio_variance)
-        portfolio_risks.append(portfolio_stdv)
+        return price_data, valid_tickers, first_trading_days_dict
+
+    dash_app.layout = html.Div(className='container', style={'min-height': '100vh', 'display': 'flex', 'flex-direction': 'column', 'padding': '0', 'overflow': 'hidden'}, children=[
+        html.H1('Stock Price Performance', style={'text-align': 'center', 'margin': '0', 'padding': '10px'}),
+        html.Div(className='row', style={'display': 'flex', 'flex': '1', 'padding': '0 10px'}, children=[
+            html.Div(className='six columns', style={'width': '60%', 'height': '100%', 'padding-right': '10px'}, children=[
+                dcc.Graph(id='price-graph', style={'height': 'calc(80vh - 180px)'}),
+                html.Div(className='input-group', style={'display': 'flex', 'flex-direction': 'column', 'gap': '5px'}, children=[
+                    html.Label('Enter Stock Tickers (comma-separated):', className='label'),
+                    dcc.Input(
+                        id='ticker-input',
+                        type='text',
+                        value='AAPL',
+                        className='form-control'
+                    ),
+                    html.Label('Select Start Date:', className='label'),
+                    dcc.DatePickerSingle(
+                        id='start-date-picker',
+                        date='2000-01-03',
+                        display_format='YYYY-MM-DD',
+                        className='form-control'
+                    ),
+                    html.Button('Update Graph', id='update-button', className='btn btn-primary', style={'margin-top': '5px'})
+                ]),
+            ]),
+            html.Div(className='six columns', style={'width': '40%', 'height': '100%', 'display': 'flex', 'justify-content': 'center', 'align-items': 'center', 'padding': '0'}, children=[
+                html.Div(id='price-table-container', style={'width': '100%'})
+            ]),
+        ]),
+        html.Footer('Stock Tracker © 2024', className='footer', style={'text-align': 'center', 'padding': '5px', 'flex-shrink': '0'})
+    ])
+
+    @dash_app.callback(
+        [Output('price-graph', 'figure'),
+         Output('price-table-container', 'children')],
+        [Input('update-button', 'n_clicks'),
+         Input('ticker-input', 'n_submit')],
+        [State('ticker-input', 'value'),
+         State('start-date-picker', 'date')]
+    )
+    def update_graph_and_table(n_clicks, n_submit, ticker_input, selected_start_date):
+        if selected_start_date is None:
+            selected_start_date = '2000-01-03'
+        selected_start_date = pd.Timestamp(selected_start_date)
         
-        sharpe_ratio = (annualized_return - RFR) / portfolio_stdv
-        sharpe_ratios.append(sharpe_ratio)
+        tickers = [ticker.strip().upper() for ticker in ticker_input.split(',')]
+        price_data, valid_tickers, first_trading_days_dict = update_data(tickers, selected_start_date)
+        
+        filtered_data = pd.DataFrame()
+        for company in valid_tickers:
+            if company in price_data.columns:
+                first_valid_date = first_trading_days_dict[company]
+                filtered_data[company] = price_data[company][price_data.index >= first_valid_date]
+        filtered_data = filtered_data.dropna(axis=1, how='all')
 
-    portfolio_returns = np.array(portfolio_returns)
-    portfolio_risks = np.array(portfolio_risks)
-    sharpe_ratios = np.array(sharpe_ratios)
+        traces = []
+        for company in filtered_data.columns:
+            traces.append(go.Scatter(
+                x=filtered_data.index,
+                y=filtered_data[company],
+                mode='lines',
+                name=company
+            ))
 
-    portfolio_metrics = [portfolio_returns, portfolio_risks, sharpe_ratios, portfolio_weights]
-    portfolios_df = pd.DataFrame(portfolio_metrics).T
-    portfolios_df.columns = ["Return", "Risk", "Sharpe", "Weights"]
+        title_date = selected_start_date.strftime("%Y-%m-%d") if not pd.isna(selected_start_date) else '2000-01-03'
+        graph_figure = {
+            'data': traces,
+            'layout': go.Layout(
+                title=dict(
+                    text=f'Stock Price Performance Since {title_date}',
+                    x=0.5,
+                    xanchor = 'center',
+                ),
+                xaxis={'title': 'Date'},
+                yaxis={'title': 'Price ($)', 'type': 'log'},
+                legend={'title': 'Company'},
+                hovermode='closest'
+            )
+        }
 
-    min_risk = portfolios_df.iloc[portfolios_df['Risk'].astype(float).idxmin()]
-    max_return = portfolios_df.iloc[portfolios_df['Return'].astype(float).idxmax()]
-    max_sharpe = portfolios_df.iloc[portfolios_df['Sharpe'].astype(float).idxmax()]
+        table_header = [
+            html.Thead(html.Tr([
+                html.Th("Company", style={'text-align': 'center'}),
+                html.Th("Starting Price ($)", style={'text-align': 'center'}),
+                html.Th("Current Price ($)", style={'text-align': 'center'})
+            ]))
+        ]
+        table_body = [
+            html.Tbody([
+                html.Tr([
+                    html.Td(valid_tickers[i], style={'text-align': 'center'}),
+                    html.Td(f"${filtered_data[valid_tickers[i]].iloc[0]:,.2f}", style={'text-align': 'center'}),
+                    html.Td(f"${filtered_data[valid_tickers[i]].iloc[-1]:,.2f}", style={'text-align': 'center'})
+                ]) for i in range(len(valid_tickers))
+            ])
+        ]
+        table = html.Table(table_header + table_body, className='table table-striped')
 
-    min_risk_weights = min_risk['Weights']
-    max_return_weights = max_return['Weights']
+        return graph_figure, table
 
-    tickers = min_risk['Weights'].keys()
-    average_weights = {ticker: (min_risk_weights[ticker] + max_return_weights[ticker]) / 2 for ticker in tickers}
-    average_weights_array = np.array(list(average_weights.values()))
-
-    average_return = np.sum(returns.mean() * average_weights_array) * 365
-    average_risk = np.sqrt(np.dot(average_weights_array.T, np.dot(returns.cov() * 365, average_weights_array)))
-    average_sharpe = (average_return - RFR) / average_risk if average_risk != 0 else 0
-
-    text_output = f"Minimum Risk Portfolio Weights:\n"
-    for ticker, weight in min_risk['Weights'].items():
-        text_output += f"{ticker}: {weight*100:.1f}%\n"
-    text_output += f"Return: {min_risk['Return']*100:.2f}%\n"
-    text_output += f"Risk: {min_risk['Risk']*100:.2f}%\n"
-    text_output += f"Sharpe Ratio: {min_risk['Sharpe']:.2f}\n\n"
-
-    text_output += "Maximum Return Portfolio Weights:\n"
-    for ticker, weight in max_return['Weights'].items():
-        text_output += f"{ticker}: {weight*100:.1f}%\n"
-    text_output += f"Return: {max_return['Return']*100:.2f}%\n"
-    text_output += f"Risk: {max_return['Risk']*100:.2f}%\n"
-    text_output += f"Sharpe Ratio: {max_return['Sharpe']:.2f}\n\n"
-
-    text_output += "Maximum Sharpe Ratio Portfolio Weights:\n"
-    for ticker, weight in max_sharpe['Weights'].items():
-        text_output += f"{ticker}: {weight*100:.1f}%\n"
-    text_output += f"Return: {max_sharpe['Return']*100:.2f}%\n"
-    text_output += f"Risk: {max_sharpe['Risk']*100:.2f}%\n"
-    text_output += f"Sharpe Ratio: {max_sharpe['Sharpe']:.2f}\n\n"
-
-    text_output += "Average Weights between Minimum Risk and Maximum Return Portfolios:\n"
-    for ticker, weight in average_weights.items():
-        text_output += f"{ticker}: {weight*100:.1f}%\n"
-    text_output += f"Return: {average_return * 100:.2f}%\n"
-    text_output += f"Risk: {average_risk * 100:.2f}%\n"
-    text_output += f"Sharpe Ratio: {average_sharpe:.2f}\n"
-
-    scatter = go.Scatter(
-        x=portfolio_risks,
-        y=portfolio_returns,
-        mode='markers',
-        marker=dict(
-            size=7.5,
-            color=sharpe_ratios[1:],
-            colorscale='Viridis',
-            showscale=True,
-            colorbar=dict(title='Sharpe Ratio')
-        ),
-        text=[f"Weights: {weights}" for weights in portfolio_weights]
-    )
-
-    max_sharpe_marker = go.Scatter(
-        x=[max_sharpe['Risk']],
-        y=[max_sharpe['Return']],
-        mode='markers',
-        marker=dict(color='red', size=15, symbol='star'),
-        name='Max Sharpe'
-    )
-
-    max_return_marker = go.Scatter(
-        x=[max_return['Risk']],
-        y=[max_return['Return']],
-        mode='markers',
-        marker=dict(color='blue', size=15, symbol='x'),
-        name='Max Return'
-    )
-
-    min_risk_marker = go.Scatter(
-        x=[min_risk['Risk']],
-        y=[min_risk['Return']],
-        mode='markers',
-        marker=dict(color='green', size=15, symbol='triangle-up'),
-        name='Min Risk'
-    )
-
-    average_marker = go.Scatter(
-    x=[average_risk],
-    y=[average_return],
-    mode='markers',
-    marker=dict(color='magenta', size=15, symbol='circle'),
-    name='Average Portfolio'
-    )
-
-    layout = go.Layout(
-    title=dict(
-        text=f"Optimized Portfolios for {', '.join(tickers)}",
-        x=0.5,  # Center the title
-        xanchor='center'
-    ),
-    xaxis=dict(title="Volatility (Risk)"),
-    yaxis=dict(title="Returns"),
-    legend=dict(x=0, y=1),
-    hovermode='closest',
-    autosize=True,
-)
-
-    fig = go.Figure(data=[scatter, max_sharpe_marker, max_return_marker, min_risk_marker, average_marker], layout=layout)
-    graph_json = pio.to_json(fig)
-
-    return {'graph': graph_json, 'text': text_output}
-
-if __name__ == '__main__':
-    tickers = []
-    result = run_sharpe_ratio(tickers)
-    print(result['text'])
+    return dash_app
