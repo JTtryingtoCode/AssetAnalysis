@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Company Comparisons</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="/static/images/assetanalysis.ico" type="image/x-icon">
     <style>
         body {
             display: flex;
@@ -26,7 +27,7 @@
             font-size: 2.5em;
             color: black;
         }
-        .content {
+        .content, .add-more-content {
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -35,8 +36,9 @@
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             width: 100%;
-            max-width: 500px;
+            max-width: 1000px;
             box-sizing: border-box;
+            margin-bottom: 20px;
         }
         form {
             display: flex;
@@ -44,7 +46,8 @@
             align-items: center;
             gap: 10px;
             width: 100%;
-            max-width: 500px;
+            max-width: 800px;
+            margin: 0 auto;
         }
         label, input, select, button {
             width: 100%;
@@ -58,9 +61,11 @@
             background-color: #4CAF50;
             color: white;
             cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
         }
         button:hover {
             background-color: #45a049;
+            transform: scale(1.05);
         }
         #result {
             width: 100%;
@@ -74,6 +79,29 @@
             font-size: 0.8em;
             color: #fff;
         }
+        #backButton {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        #backButton:hover {
+            background-color: #45a049;
+            transform: scale(1.05);
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
         @media (max-width: 600px) {
             h1 {
                 font-size: 2em;
@@ -132,10 +160,10 @@
 
             <button id="compareButton" type="submit">Compare</button>
         </form>
-        <div id="addMoreContainer" style="display: none;">
-            <button id="addMoreButton">Add Another Metric</button>
-            <button id="resetButton">Reset</button>
-        </div>
+    </div>
+    <div class="add-more-content" id="addMoreContainer" style="display: none;">
+        <button id="addMoreButton">Add Another Metric</button>
+        <button id="resetButton">Reset</button>
     </div>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script>
@@ -225,8 +253,8 @@
                 Plotly.react('result', plotData, layout, { responsive: true });
 
                 document.getElementById('result').style.display = 'block';
-                document.getElementById('compareForm').style.display = 'none';
-                document.getElementById('addMoreContainer').style.display = 'block';
+                document.querySelector('.content').style.display = 'none'; // Hide the original input form
+                document.getElementById('addMoreContainer').style.display = 'flex';
                 // Force a resize to fill the entire space
                 window.dispatchEvent(new Event('resize'));
             })
@@ -237,14 +265,16 @@
         });
 
         document.getElementById('addMoreButton').addEventListener('click', function() {
-            document.getElementById('compareForm').style.display = 'block';
+            document.getElementById('compareForm').style.display = 'flex'; // Show the form for adding another metric
             document.getElementById('addMoreContainer').style.display = 'none';
+            document.querySelector('.content').style.display = 'block'; // Ensure the content section is visible again
             document.getElementById('tickers').value = '';
         });
 
         document.getElementById('resetButton').addEventListener('click', function() {
-            document.getElementById('compareForm').style.display = 'block';
+            document.getElementById('compareForm').style.display = 'flex';
             document.getElementById('addMoreContainer').style.display = 'none';
+            document.querySelector('.content').style.display = 'block'; // Ensure the content section is visible again
             document.getElementById('tickers').value = '';
             tickers = [];
             plotData = [];
@@ -262,6 +292,6 @@
             Plotly.Plots.resize(resultDiv);
         });
     </script>
-    <button onclick="window.location.href='/'">Back to Home</button>
+    <button id="backButton" onclick="window.location.href='/'">Back to Home</button>
 </body>
 </html>
