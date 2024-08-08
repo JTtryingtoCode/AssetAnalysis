@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="/static/images/assetanalysis.ico" type="image/x-icon">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
         body {
             display: flex;
             flex-direction: column;
@@ -13,45 +16,110 @@
             justify-content: center;
             min-height: 100vh;
             margin: 0;
-            font-family: Arial, sans-serif;
+            font-family: 'Roboto', Arial, sans-serif;
             background: linear-gradient(135deg, #72EDF2 10%, #5151E5 100%);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
             color: white;
             text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
         }
+
         h1 {
+            margin-top: 80px;
             margin-bottom: 20px;
-            font-size: 2.5em;
+            font-size: 3em;
+            color: black;
         }
+
         form {
             display: flex;
             flex-direction: column;
             align-items: center;
             background-color: rgba(0, 0, 0, 0.5);
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            width: 90%;
-            max-width: 500px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            width: calc(100% - 40px); /* Add space on the sides */
+            max-width: 800px;
+            box-sizing: border-box;
+            margin: 20px auto;
         }
+
         label, input, button {
-            width: 100%;
             margin: 10px 0;
+            width: 100%;
         }
-        input, button {
+
+        input {
             padding: 10px;
-            border-radius: 4px;
             border: none;
-            margin-top: 5px;
+            border-radius: 5px;
+            font-size: 1em;
+            background-color: white;
+            color: black;
         }
+
         button {
+            padding: 10px;
             background-color: #4CAF50;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 5px;
             cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
         }
+
         button:hover {
+            transform: scale(1.05);
+        }
+
+        #backButton {
+            width: 100%;
+            max-width: 100%;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        #backButton:hover {
             background-color: #45a049;
+            transform: scale(1.05);
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2em;
+            }
+            form {
+                width: 100%;
+                max-width: 300px;
+                padding: 15px;
+            }
+            button {
+                padding: 8px;
+            }
+            #extra-buttons {
+                width: 100%;
+                max-width: 300px;
+                padding: 15px;
+            }
+            #backButton {
+                width: 100%;
+                max-width: 300px;
+            }
         }
     </style>
 </head>
@@ -66,8 +134,9 @@
         <input type="password" id="password" name="password" required>
 
         <button type="submit">Login</button>
+
+        <button onclick="window.location.href='/register'">Don't have an account? Register</button>
     </form>
-    <button onclick="window.location.href='/register'">Don't have an account? Register</button>
-    <button onclick="window.location.href='/'">Back to Home</button>
+    <button id="backButton" onclick="window.location.href='/'">Back to Home</button>
 </body>
 </html>
