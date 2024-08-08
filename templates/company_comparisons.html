@@ -6,7 +6,10 @@
     <title>Company Comparisons</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="icon" href="/static/images/assetanalysis.ico" type="image/x-icon">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
         body {
             display: flex;
             flex-direction: column;
@@ -14,72 +17,111 @@
             justify-content: center;
             min-height: 100vh;
             margin: 0;
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #72EDF2 10%, #5151E5 100%);
+            font-family: 'Roboto', Arial, sans-serif;
+            background: linear-gradient(135deg, #72EDF2, #5151E5);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
             color: white;
             text-align: center;
-            padding: 10px;
+            padding: 20px;
             box-sizing: border-box;
         }
+
         h1 {
-            margin-top: 100px; /* Adjust this to accommodate the fixed header */
-            margin-bottom: 40px;
-            font-size: 2.5em;
+            margin-top: 80px;
+            margin-bottom: 20px;
+            font-size: 3em;
             color: black;
         }
-        .content, .add-more-content {
+
+        .content {
+            width: 100%;
+            max-width: 800px; /* Match the max-width of the correctly sized box */
+            box-sizing: border-box;
+        }
+
+        #compareForm {
             display: flex;
             flex-direction: column;
             align-items: center;
             background-color: rgba(0, 0, 0, 0.5);
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 1000px;
-            box-sizing: border-box;
-            margin-bottom: 20px;
-        }
-        form {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
             width: 100%;
             max-width: 800px;
-            margin: 0 auto;
+            box-sizing: border-box;
         }
-        label, input, select, button {
+
+
+        label, select, input, button {
+            margin: 10px 0;
             width: 100%;
-            padding: 10px;
-            border-radius: 4px;
-            border: none;
-            margin-bottom: 15px;
         }
+
+        input, select {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            background-color: white;
+            color: black;
+        }
+
         button {
-            margin-top: 20px;
+            padding: 10px;
             background-color: #4CAF50;
             color: white;
+            border: none;
+            border-radius: 5px;
             cursor: pointer;
             transition: background-color 0.3s, transform 0.3s;
         }
+
         button:hover {
-            background-color: #45a049;
             transform: scale(1.05);
         }
+
+        #result-container {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            margin-top: 20px;
+            padding-left: 20px; /* Add padding on the sides */
+            padding-right: 20px; /* Add padding on the sides */
+            box-sizing: border-box; /* Ensure padding doesn't affect the width */
+        }
+
         #result {
             width: 100%;
-            max-width: 1000px;
             height: 800px;
-            display: none; /* Hide the result div initially */
-            margin-bottom: 20px; /* Add some space below the graph */
+            box-sizing: border-box;
         }
-        .footer {
+
+        .add-more-content {
+            display: none; /* Hide this initially */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
             margin-top: 20px;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            width: 100%;
+            max-width: 800px;
+            box-sizing: border-box;
+        }
+
+        .footer {
+            margin: 20px;
             font-size: 0.8em;
             color: #fff;
         }
+
         #backButton {
+            margin-top: 20px;
             padding: 10px 20px;
             background-color: #4CAF50;
             color: white;
@@ -93,26 +135,31 @@
             background-color: #45a049;
             transform: scale(1.05);
         }
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
         @media (max-width: 600px) {
             h1 {
                 font-size: 2em;
             }
-            form {
+            form, #result-container {
                 width: 100%;
                 max-width: 300px;
-                padding: 15px;
             }
             button {
                 padding: 8px;
+            }
+            #result {
+                height: 400px;
+            }
+            .add-more-content {
+                width: 100%;
+                max-width: 300px;
+                padding: 15px;
             }
         }
     </style>
@@ -120,50 +167,42 @@
 <body>
     {% include 'header.html' %}
     <h1>Company Comparisons</h1>
-    <div id="result"></div>
     <div class="content">
         <form id="compareForm">
-            <label for="tickers">Enter Company Ticker:</label>
-            <input type="text" id="tickers" name="tickers">
+            <label for="tickers">Enter Company Ticker(s) (comma-separated):</label>
+            <input type="text" id="tickers" name="tickers" placeholder="e.g. AAPL, MSFT, GOOGL" required>
 
             <label for="metric">Select Financial Metric:</label>
             <select id="metric" name="metric">
-                <option value="assets">Assets</option>
-                <option value="cost-of-sales">Cost of Sales</option>
-                <option value="current-liabilities">Current Liabilities</option>
-                <option value="dividend-yield">Dividend Yield</option>
-                <option value="ebitda">EBITDA</option>
-                <option value="eps">EPS Earnings Per Share</option>
-                <option value="gross-profit-on-sales">Gross Profit on Sales</option>
-                <option value="interest-income">Interest Income</option>
-                <option value="market-capitalization">Market Capitalization</option>
-                <option value="operating-expenses">Operating Expenses</option>
-                <option value="ordinary-share-capital">Ordinary Share Capital</option>
-                <option value="pre-tax-profit">Pre-Tax Profit</option>
-                <option value="selling-and-administration-expenses">Selling and Administration Expenses</option>
-                <option value="trade-creditors">Trade Creditors</option>
-                <option value="cash-and-equivalent">Cash and Equivalent</option>
-                <option value="current-assets">Current Assets</option>
-                <option value="debt">Debt</option>
-                <option value="ebit">EBIT</option>
-                <option value="employees">Employees</option>
-                <option value="equity-capital-and-reserves">Equity Capital and Reserves</option>
-                <option value="interest-expense-on-debt">Interest Expense on Debt</option>
-                <option value="loan-capital">Loan Capital</option>
-                <option value="net-income">Net Income</option>
-                <option value="operating-profit">Operating Profit</option>
-                <option value="pe">PE Price to Earnings</option>
-                <option value="sales">Sales Revenues</option>
-                <option value="stock">Stock</option>
-                <option value="trade-debtors">Trade Debtors</option>
+                <optgroup label="Financials">
+                    <!-- Populate with financial metrics dynamically -->
+                </optgroup>
+                <optgroup label="Balance Sheet">
+                    <!-- Populate with balance sheet metrics dynamically -->
+                </optgroup>
+                <optgroup label="Cash Flow">
+                    <!-- Populate with cash flow metrics dynamically -->
+                </optgroup>
+                <optgroup label="Others">
+                    <!-- Populate with other metrics dynamically -->
+                </optgroup>
+            </select>
+
+            <label for="period">Select Period:</label>
+            <select id="period" name="period">
+                <option value="yearly">Yearly</option>
+                <option value="quarterly">Quarterly</option>
             </select>
 
             <button id="compareButton" type="submit">Compare</button>
         </form>
     </div>
-    <div class="add-more-content" id="addMoreContainer" style="display: none;">
+    <div class="add-more-content" id="addMoreContainer">
         <button id="addMoreButton">Add Another Metric</button>
         <button id="resetButton">Reset</button>
+    </div>
+    <div id="result-container">
+        <div id="result"></div>
     </div>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script>
@@ -172,17 +211,24 @@
         let titleMetrics = [];
         let titleTickers = [];
         let yAxisCount = 1;
+        let colorMap = {};  // Map to store colors for each ticker
+        const colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"];
 
         document.getElementById('compareForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const newTickers = document.getElementById('tickers').value.toUpperCase().split(',').map(ticker => ticker.trim());
-            const metric = document.getElementById('metric').value.replace(/_/g, '-').replace(/\b\w/g, l => l.toUpperCase()); // Capitalize metric
+            const metric = document.getElementById('metric').value;
+            const period = document.getElementById('period').value;
 
             tickers.push(...newTickers);
 
             newTickers.forEach(ticker => {
                 if (!titleTickers.includes(ticker)) {
                     titleTickers.push(ticker);
+                    // Assign a color to the ticker if it hasn't been assigned already
+                    if (!colorMap[ticker]) {
+                        colorMap[ticker] = colors[Object.keys(colorMap).length % colors.length];
+                    }
                 }
             });
 
@@ -196,22 +242,25 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ tickers: newTickers, metric: metric })
+                body: JSON.stringify({ tickers: newTickers, metric: metric, period: period })
             })
             .then(response => response.json())
             .then(data => {
                 console.log("Received data:", data);
 
                 newTickers.forEach((ticker, index) => {
-                    const displayTicker = ticker.split(':')[0];
-                    const tickerData = data[displayTicker];
+                    const tickerData = data[ticker];
 
                     if (tickerData && tickerData !== 'N/A') {
                         const x = [];
                         const y = [];
 
                         tickerData.forEach(item => {
-                            x.push(new Date(item.date));
+                            if (item.date !== 'N/A') {
+                                x.push(new Date(item.date));
+                            } else {
+                                x.push(item.date);
+                            }
                             y.push(item.value);
                         });
 
@@ -220,8 +269,9 @@
                                 x: x,
                                 y: y,
                                 mode: 'lines+markers',
-                                name: `${displayTicker} (${metric} - ${y[y.length - 1]})`,
-                                yaxis: `y${titleMetrics.indexOf(metric) + 1}`
+                                name: `${ticker} (${metric})`,
+                                yaxis: `y${titleMetrics.indexOf(metric) + 1}`,
+                                line: {color: colorMap[ticker]}  // Assign color based on the ticker
                             });
                         }
                     }
@@ -252,10 +302,9 @@
 
                 Plotly.react('result', plotData, layout, { responsive: true });
 
-                document.getElementById('result').style.display = 'block';
-                document.querySelector('.content').style.display = 'none'; // Hide the original input form
-                document.getElementById('addMoreContainer').style.display = 'flex';
-                // Force a resize to fill the entire space
+                document.getElementById('result-container').style.display = 'flex';
+                document.querySelector('.content').style.display = 'none';
+                document.getElementById('addMoreContainer').style.display = 'flex'; // Show add more and reset buttons
                 window.dispatchEvent(new Event('resize'));
             })
             .catch(error => {
@@ -265,33 +314,86 @@
         });
 
         document.getElementById('addMoreButton').addEventListener('click', function() {
-            document.getElementById('compareForm').style.display = 'flex'; // Show the form for adding another metric
+            document.getElementById('compareForm').style.display = 'flex';
             document.getElementById('addMoreContainer').style.display = 'none';
-            document.querySelector('.content').style.display = 'block'; // Ensure the content section is visible again
+            document.querySelector('.content').style.display = 'block';
             document.getElementById('tickers').value = '';
         });
 
         document.getElementById('resetButton').addEventListener('click', function() {
             document.getElementById('compareForm').style.display = 'flex';
             document.getElementById('addMoreContainer').style.display = 'none';
-            document.querySelector('.content').style.display = 'block'; // Ensure the content section is visible again
+            document.querySelector('.content').style.display = 'block';
             document.getElementById('tickers').value = '';
             tickers = [];
             plotData = [];
             titleMetrics = [];
             titleTickers = [];
             yAxisCount = 1;
+            colorMap = {};  // Reset color map
             Plotly.react('result', [], { title: '', xaxis: { title: 'Date' }, yaxis: { title: 'Value' } });
+            document.getElementById('result-container').style.display = 'none';
         });
 
-        // Adjust the size of the graph container when the window is resized
         window.addEventListener('resize', function() {
             const resultDiv = document.getElementById('result');
             resultDiv.style.width = '100%';
             resultDiv.style.height = '800px';
             Plotly.Plots.resize(resultDiv);
         });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/compare_companies', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ tickers: ["AAPL"] }) // Replace with any sample ticker
+            })
+            .then(response => response.json())
+            .then(data => {
+                const financialsGroup = document.querySelector('#metric optgroup[label="Financials"]');
+                const balanceSheetGroup = document.querySelector('#metric optgroup[label="Balance Sheet"]');
+                const cashFlowGroup = document.querySelector('#metric optgroup[label="Cash Flow"]');
+                const othersGroup = document.querySelector('#metric optgroup[label="Others"]');
+
+                data.financials.forEach(metric => {
+                    const option = document.createElement('option');
+                    option.value = metric.key;
+                    option.text = metric.name;
+                    financialsGroup.appendChild(option);
+                });
+
+                data.balance_sheet.forEach(metric => {
+                    const option = document.createElement('option');
+                    option.value = metric.key;
+                    option.text = metric.name;
+                    balanceSheetGroup.appendChild(option);
+                });
+
+                data.cash_flow.forEach(metric => {
+                    const option = document.createElement('option');
+                    option.value = metric.key;
+                    option.text = metric.name;
+                    cashFlowGroup.appendChild(option);
+                });
+
+                data.info.forEach(metric => {
+                    const option = document.createElement('option');
+                    option.value = metric.key;
+                    option.text = metric.name;
+                    othersGroup.appendChild(option);
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while fetching the data. Please try again later.');
+            });
+        });
     </script>
     <button id="backButton" onclick="window.location.href='/'">Back to Home</button>
+    <div class="footer">
+        Company Comparisons © 2024
+    </div>
 </body>
 </html>
