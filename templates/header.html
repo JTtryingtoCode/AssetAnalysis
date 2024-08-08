@@ -7,8 +7,9 @@
             <div class="dropdown">
                 <button class="dropbtn">Models</button>
                 <div class="dropdown-content">
-                    <a href="portfolio_optimizer">Portfolio Optimizer</a>
                     <a href="/regression">Regression Models</a>
+                    <a href="/portfolio_optimizer">Portfolio Optimizer</a>
+                    <a href="/portfolio_comparisons">Portfolio Comparisons</a>
                     <a href="/company_comparisons">Company Comparisons</a>
                     <a href="/stock_price_performance">Stock Performance Tracker</a>
                     <a href="/investment_growth">Investment Growth Calculator</a>
@@ -17,7 +18,7 @@
         </div>
         <div class="header-right">
             {% if current_user.is_authenticated %}
-                <a href="/profile">Welcome, {{ current_user.email }}</a>
+                <a href="/profile">Welcome, {{ current_user.first_name }}</a>
                 <a href="/logout">Logout</a>
             {% else %}
                 <a href="/login">Login/Register</a>
@@ -25,29 +26,18 @@
         </div>
     </div>
 </div>
-
-
 <style>
-    body {
-        margin: 0;
-        padding: 0;
-        font-family: Arial, sans-serif;
-    }
-
     .header {
         width: 100%;
         display: flex;
         justify-content: center;
-        background-color: rgba(0, 0, 0, 0.7);
         padding: 10px 0;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         z-index: 1000;
         background: none;
-        box-shadow: none;
     }
 
     .header-container {
@@ -59,26 +49,45 @@
         padding: 0 20px;
     }
 
+    .header-left, .header-right {
+        flex-grow: 1;
+        display: flex;
+        align-items: center;
+    }
+
+    .header-right {
+        justify-content: flex-end;
+    }
+
+    .header-middle {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
     .header a, .dropbtn {
         color: white;
         text-decoration: none;
         font-size: 1em;
         font-weight: bold;
-        padding: 10px;
+        padding: 10px 20px;
         border-radius: 5px;
         background-color: rgba(0, 0, 0, 0.5);
         box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
         transition: background-color 0.3s;
         white-space: nowrap;
-        text-align: center;
-        flex-grow: 1;
-        flex-basis: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
-    .header a:hover, .dropbtn:hover {
-        background-color: #72EDF2;
-        color: #5151E5;
+    .header-right a:last-child {
+        margin-left: 10px; /* Adjust the value as needed for the gap size */
     }
+
 
     .dropdown-content {
         display: none;
@@ -93,16 +102,11 @@
 
     .dropdown-content a {
         color: white;
-        padding: 10px;
+        padding: 10px 20px;
         text-decoration: none;
         display: block;
         background-color: rgba(0, 0, 0, 0.5);
         transition: background-color 0.3s;
-    }
-
-    .dropdown-content a:hover {
-        background-color: #72EDF2;
-        color: #5151E5;
     }
 
     .dropdown:hover .dropdown-content {
