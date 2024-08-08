@@ -1,26 +1,17 @@
-body {
-    margin: 0;
-    padding: 0;
-    font-family: 'Roboto', Arial, sans-serif;
-    background: linear-gradient(135deg, #72EDF2, #5151E5);
-    background-size: 400% 400%;
-    animation: gradientBG 15s ease infinite;
-    color: white;
-    text-align: center;
-    padding-top: 60px; /* Adjust this to accommodate the fixed header */
-    box-sizing: border-box;
-}
-
 .header {
     width: 100%;
     display: flex;
     justify-content: center;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 10px 0;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     z-index: 1000;
     background: none;
+    box-shadow: none;
 }
 
 .header-container {
@@ -32,7 +23,15 @@ body {
     padding: 0 20px;
 }
 
+.header-left, .header-middle, .header-right {
+    display: flex;
+    align-items: center;
+}
+
 .header a, .dropbtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: white;
     text-decoration: none;
     font-size: 1em;
@@ -44,13 +43,6 @@ body {
     transition: background-color 0.3s;
     white-space: nowrap;
     text-align: center;
-    flex-grow: 1;
-    flex-basis: 0;
-}
-
-.header a:hover, .dropbtn:hover {
-    background-color: #72EDF2;
-    color: #5151E5;
 }
 
 .dropdown-content {
@@ -80,6 +72,10 @@ body {
 
 .dropdown:hover .dropdown-content {
     display: block;
+}
+
+.header-middle {
+    align-self: center; /* Ensures the middle section aligns in the center */
 }
 
 @media (max-width: 600px) {
@@ -129,6 +125,8 @@ body {
         padding: 10px;
     }
 }
+
+
 
 @keyframes gradientBG {
     0% { background-position: 0% 50%; }
