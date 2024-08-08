@@ -24,7 +24,6 @@
             text-align: center;
             padding: 10px;
             box-sizing: border-box;
-            overflow: hidden;
         }
 
         h1 {
@@ -37,23 +36,32 @@
         }
 
         nav {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             background-color: rgba(0, 0, 0, 0.5);
             padding: 20px;
             border-radius: 15px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
             animation: slideIn 2s ease-in-out;
+            width: 90%; /* Ensure the nav takes most of the screen width */
+            max-width: 500px; /* Limit the max-width for larger screens */
         }
 
         ul {
             list-style-type: none;
             padding: 0;
+            width: 100%;
         }
 
         li {
             margin: 20px 0;
+            width: 100%;
         }
 
         a {
+            display: block;
             text-decoration: none;
             color: white;
             font-size: 1.5em;
@@ -61,6 +69,7 @@
             transition: color 0.3s, background-color 0.3s, transform 0.3s;
             padding: 10px 20px;
             border-radius: 10px;
+            text-align: center;
         }
 
         a:hover {
@@ -112,8 +121,9 @@
     <h1>Choose a Model to Run</h1>
     <nav>
         <ul>
-            <li><a href="portfolio_optimizer">Portfolio Optimizer</a></li>
             <li><a href="regression">Regression Models</a></li>
+            <li><a href="portfolio_optimizer">Portfolio Optimizer</a></li>
+            <li><a href="portfolio_comparisons">Portfolio Comparisons</a></li>
             <li><a href="company_comparisons">Company Comparisons</a></li>
             <li><a href="stock_price_performance">Stock Performance Tracker</a></li>
             <li><a href="investment_growth">Investment Growth Calculator</a></li>
