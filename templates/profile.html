@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profile</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="/static/images/assetanalysis.ico" type="image/x-icon">
     <style>
         body {
             display: flex;
@@ -62,7 +63,7 @@
     {% include 'header.html' %}
     <h1>Profile</h1>
     <div class="container">
-        <p>Welcome, {{ user.email }}!</p>
+        <p>Welcome, {{ user.first_name }}!</p>
         <p>Your current subscription: <span id="subscription-status">{{ user.subscription_status }}</span></p>
         <form id="subscription-form">
             <label for="subscription">Change Subscription:</label>
