@@ -27,55 +27,41 @@ login_manager.login_view = 'login'
 stripe.api_key = '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'
 YOUR_DOMAIN = 'https://assetanalysis.info'
 
-te.login('1c15ef785f7244b:kvc8y6mv8z6c41a')
-
+#te.login('1c15ef785f7244b:kvc8y6mv8z6c41a')
 logging.basicConfig(level=logging.INFO)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+
+#User Settings (Load Users, Profile, Register, Login, Logout)
+#------------------------------------------------------------
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    first_name = db.Column(db.String(150), nullable=False)
+    last_name = db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(150), nullable=False)
     subscription_status = db.Column(db.String(50), nullable=False, default='Free')
 
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(User, user_id)
-
-def subscription_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if current_user.subscription_status not in ['monthly', 'yearly']:
-            return redirect(url_for('index'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-@app.route('/')
-def index():
-    return render_template('index.html', current_user=current_user)
+    return db.session.get(User, int(user_id))
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
         email = request.form.get('email')
         password = request.form.get('password')
-        subscription = request.form.get('subscription')
         hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
-        new_user = User(email=email, password=hashed_password, subscription_status=subscription)
+        new_user = User(first_name=first_name, last_name=last_name, email=email, password=hashed_password)
         db.session.add(new_user)
         db.session.commit()
-
         return redirect(url_for('login'))
-
     return render_template('register.html')
 
-@app.route('/check_subscription')
-def check_subscription():
-    if current_user.is_authenticated:
-        return jsonify(subscription_status=current_user.subscription_status)
-    else:
-        return jsonify(subscription_status='none')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -85,19 +71,37 @@ def login():
         user = User.query.filter_by(email=email).first()
         if user and check_password_hash(user.password, password):
             login_user(user)
-            return redirect(url_for('index'))
+            return redirect(url_for('profile'))
     return render_template('login.html')
-
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for('index'))
 
 @app.route('/profile')
 @login_required
 def profile():
     return render_template('profile.html', user=current_user)
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+#Stripe Setup (Subscriptions & Payments)
+#------------------------------------------------------------
+
+def subscription_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if current_user.subscription_status not in ['monthly', 'yearly']:
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/check_subscription')
+def check_subscription():
+    if current_user.is_authenticated:
+        return jsonify(subscription_status=current_user.subscription_status)
+    else:
+        return jsonify(subscription_status='none')
 
 @app.route('/change_subscription', methods=['POST'])
 @login_required
@@ -110,6 +114,18 @@ def change_subscription():
         return jsonify(success=True)
     else:
         return jsonify(success=False)
+
+@app.route('/cancel_subscription', methods=['POST'])
+@login_required
+def cancel_subscription():
+    if current_user.subscription_status != 'Free':
+        current_user.subscription_status = 'Free'
+        db.session.commit()
+    return redirect(url_for('subscription_cancelled'))
+
+@app.route('/subscription_cancelled')
+def subscription_cancelled():
+    return render_template('cancel.html')
 
 @app.route('/webhook', methods=['POST'])
 def stripe_webhook():
@@ -150,6 +166,12 @@ def stripe_webhook():
 
     return jsonify(success=True), 200
 
+#Index.html and other pages
+#-----------------------------------------------
+
+@app.route('/')
+def index():
+    return render_template('index.html', current_user=current_user)
 
 @app.route('/regression')
 #@login_required
@@ -218,7 +240,6 @@ def run_investment_growth():
     graph_json, summary, cumulative_investment, cumulative_total_value = func(tickers, start_date, monthly_investment)
     return jsonify({"graph": graph_json, "summary": summary, "cumulative_investment": cumulative_investment, "cumulative_total_value": cumulative_total_value})
 
-
 @app.route('/stock_price_performance')
 def stock_price_performance():
     return render_template('stock_price_performance.html')
@@ -268,8 +289,6 @@ def run_script(script_path, function_name, stock, start_date):
     return func(stock, start_date)
 
 @app.route('/company_comparisons')
-#@login_required
-#@subscription_required
 def company_comparisons():
     return render_template('company_comparisons.html')
 
@@ -277,89 +296,107 @@ def company_comparisons():
 def compare_companies():
     data = request.get_json()
     tickers = data['tickers']
-    comparison = []
-    # Add logic to get company comparison metrics from Trading Economics API
-    metrics = ["assets", "cost_of_sales", "current_liabilities", "dividend_yield", "ebitda",
-               "eps_earnings_per_share", "gross_profit_on_sales", "interest_income",
-               "market_capitalization", "operating_expenses", "ordinary_share_capital",
-               "pre_tax_profit", "selling_and_administration_expenses", "trade_creditors",
-               "cash_and_equivalent", "current_assets", "debt", "ebit", "employees",
-               "equity_capital_and_reserves", "interest_expense_on_debt", "loan_capital",
-               "net_income", "operating_profit", "pe_price_to_earnings", "sales_revenues",
-               "stock", "trade_debtors"]
-    for metric in metrics:
-        comparison.append({"name": metric.replace('_', ' ').title(), "key": metric})
-    return jsonify({"comparison": comparison})
+    if not tickers:
+        return jsonify({"comparison": []})
+    
+    ticker = tickers[0]  # Use the first ticker to extract metrics
+    stock = yf.Ticker(ticker)
+    
+    # Extract metrics from different data sources
+    financials_metrics = stock.financials.index.tolist()
+    balance_sheet_metrics = stock.balance_sheet.index.tolist()
+    cashflow_metrics = stock.cashflow.index.tolist()
+    info_metrics = list(stock.info.keys())
+    
+    return jsonify({
+        "financials": [{"name": metric.replace('_', ' ').title(), "key": metric} for metric in financials_metrics],
+        "balance_sheet": [{"name": metric.replace('_', ' ').title(), "key": metric} for metric in balance_sheet_metrics],
+        "cash_flow": [{"name": metric.replace('_', ' ').title(), "key": metric} for metric in cashflow_metrics],
+        "info": [{"name": metric.replace('_', ' ').title(), "key": metric} for metric in info_metrics]
+    })
 
 @app.route('/get_financials', methods=['POST'])
 def get_financials():
     data = request.json
     tickers = data.get('tickers', [])
     metric = data.get('metric', None)
+    period = data.get('period', 'yearly')  # Default to yearly if not specified
     
     financial_data = {}
-    
+
     for ticker in tickers:
         ticker = ticker.strip().upper()
-        if ':US' not in ticker:
-            ticker += ':US'
         print(f"Fetching data for ticker: {ticker}")
-        
-        retries = 3  # Number of retries
-        for attempt in range(retries):
-            try:
-                response = requests.get(f"https://api.tradingeconomics.com/financials/historical/{ticker}:{metric}?d1=1900-01-01&c=1c15ef785f7244b:kvc8y6mv8z6c41a")
-                response.raise_for_status()
-                response_json = response.json()
-                print(f"Raw response for {ticker}: {response_json}")
+        try:
+            stock = yf.Ticker(ticker)
+            historical_data = None
 
-                financial_data[ticker.split(':')[0]] = response_json
-                break  # Exit the retry loop if the request was successful
-                
-            except requests.exceptions.HTTPError as http_err:
-                if response.status_code == 429:  # Rate limit exceeded
-                    if attempt < retries - 1:
-                        print(f"Rate limit exceeded for {ticker}. Retrying in 5 seconds...")
-                        time.sleep(5)  # Wait before retrying
-                        continue  # Retry the request
-                    else:
-                        print(f"HTTP error occurred for {ticker}: {http_err}")
-                        financial_data[ticker.split(':')[0]] = 'N/A'
+            if metric in stock.info:
+                # Special handling for info dictionary metrics
+                financial_data[ticker] = [{"date": pd.Timestamp.today().strftime('%Y-%m-%d'), "value": stock.info[metric]}]
+            else:
+                if period == 'quarterly':
+                    if metric in stock.quarterly_financials.index:
+                        historical_data = stock.quarterly_financials.loc[metric]
+                    elif metric in stock.quarterly_balance_sheet.index:
+                        historical_data = stock.quarterly_balance_sheet.loc[metric]
+                    elif metric in stock.quarterly_cashflow.index:
+                        historical_data = stock.quarterly_cashflow.loc[metric]
                 else:
-                    print(f"HTTP error occurred for {ticker}: {http_err}")
-                    financial_data[ticker.split(':')[0]] = 'N/A'
-                break  # Exit the retry loop for non-rate-limit errors
-                
-            except requests.exceptions.RequestException as req_err:
-                print(f"Request error occurred for {ticker}: {req_err}")
-                financial_data[ticker.split(':')[0]] = 'N/A'
-                break  # Exit the retry loop
-                
-            except ValueError as json_err:
-                print(f"JSON decode error occurred for {ticker}: {json_err}")
-                print(f"Response content: {response.content}")
-                financial_data[ticker.split(':')[0]] = 'N/A'
-                break  # Exit the retry loop
-                
-            except Exception as e:
-                print(f"Unexpected error occurred for {ticker}: {e}")
-                financial_data[ticker.split(':')[0]] = 'N/A'
-                break  # Exit the retry loop
-    
+                    if metric in stock.financials.index:
+                        historical_data = stock.financials.loc[metric]
+                    elif metric in stock.balance_sheet.index:
+                        historical_data = stock.balance_sheet.loc[metric]
+                    elif metric in stock.cashflow.index:
+                        historical_data = stock.cashflow.loc[metric]
+
+                if historical_data is not None:
+                    # Filter out NaN values
+                    historical_data = historical_data.dropna()
+                    financial_data[ticker] = [{"date": date.strftime('%Y-%m-%d'), "value": value} for date, value in historical_data.items()]
+                else:
+                    financial_data[ticker] = 'N/A'
+        except Exception as e:
+            print(f"Error fetching data for {ticker}: {e}")
+            financial_data[ticker] = 'N/A'
+
     print(f"Final financial data: {financial_data}")
     return jsonify(financial_data)
 
-@app.route('/cancel_subscription', methods=['POST'])
-@login_required
-def cancel_subscription():
-    if current_user.subscription_status != 'Free':
-        current_user.subscription_status = 'Free'
-        db.session.commit()
-    return redirect(url_for('subscription_cancelled'))
+@app.route('/portfolio_comparisons')
+def portfolio_comparisons():
+    return render_template('portfolio_comparisons.html')
 
-@app.route('/subscription_cancelled')
-def subscription_cancelled():
-    return render_template('cancel.html')
+@app.route('/run_portfolio_comparison', methods=['POST'])
+def run_portfolio_comparison():
+    data = request.get_json()
+    tickers = data.get('tickers')
+    allocations = data.get('allocations')
+    benchmark = data.get('benchmark')
+    start_date = data.get('start_date')
+    
+    logging.info(f"Form data received: {data}")
+    logging.info(f"Tickers: {tickers}")
+    logging.info(f"Allocations: {allocations}")
+    logging.info(f"Benchmark: {benchmark}")
+    logging.info(f"Start Date: {start_date}")
+    
+    # Filter out empty tickers and allocations
+    filtered_tickers = [t for t in tickers if t]
+    filtered_allocations = [a for a in allocations if a]
+    
+    logging.info(f"Filtered Tickers: {filtered_tickers}")
+    logging.info(f"Filtered Allocations: {filtered_allocations}")
+
+    # Dynamically load the function
+    script_path = os.path.join(BASE_DIR, 'programs', 'Portfolio_Comparisons.py')
+    spec = importlib.util.spec_from_file_location("portfolio_comparisons", script_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    func = getattr(module, 'run_portfolio_comparison')
+    
+    result = func(filtered_tickers, filtered_allocations, benchmark, start_date)
+    return jsonify(result)
 
 if __name__ == "__main__":
     with app.app_context():
