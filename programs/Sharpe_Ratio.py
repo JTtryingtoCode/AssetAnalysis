@@ -17,18 +17,34 @@ def run_sharpe_ratio(tickers):
     no_of_simulations = 5000
 
     returns = pd.DataFrame()
+    earliest_start_date = pd.Timestamp(start_date).tz_localize('UTC')
+
     for ticker in tickers:
         stock = yf.Ticker(ticker)
         try:
             hist = stock.history(start=start_date, end=end_date)
+            hist.index = hist.index.tz_convert('UTC').normalize()  # Convert index to UTC and normalize to remove time
             hist[ticker] = hist['Close'].pct_change()
             if returns.empty:
                 returns = hist[[ticker]]
             else:
                 returns = returns.join(hist[[ticker]], how='outer')
             logging.info(f"Fetched data for {ticker}")
+            
+            ticker_start_date = hist.index.min()
+            if ticker_start_date > earliest_start_date:
+                earliest_start_date = ticker_start_date
         except Exception as e:
             logging.error(f"Could not fetch data for {ticker}: {e}")
+
+    if returns.empty:
+        raise ValueError("No valid data fetched for the tickers provided.")
+
+    # Drop NaN values and keep only rows with complete data
+    returns.dropna(inplace=True)
+    returns = returns[returns.index >= earliest_start_date]
+
+    logging.info(f"Combined returns dataframe (last entries):\n{returns.tail()}")
 
     if returns.empty:
         raise ValueError("No valid data fetched for the tickers provided.")
@@ -64,9 +80,21 @@ def run_sharpe_ratio(tickers):
     portfolios_df = pd.DataFrame(portfolio_metrics).T
     portfolios_df.columns = ["Return", "Risk", "Sharpe", "Weights"]
 
-    min_risk = portfolios_df.iloc[portfolios_df['Risk'].astype(float).idxmin()]
-    max_return = portfolios_df.iloc[portfolios_df['Return'].astype(float).idxmax()]
-    max_sharpe = portfolios_df.iloc[portfolios_df['Sharpe'].astype(float).idxmax()]
+    logging.info(f"Portfolios dataframe before dropping NaNs:\n{portfolios_df.head()}")
+
+    portfolios_df.dropna(inplace=True)
+    logging.info(f"Portfolios dataframe after dropping NaNs:\n{portfolios_df.head()}")
+
+    if portfolios_df.empty:
+        raise ValueError("No valid portfolios generated after removing NaN values.")
+
+    try:
+        min_risk = portfolios_df.iloc[portfolios_df['Risk'].astype(float).idxmin()]
+        max_return = portfolios_df.iloc[portfolios_df['Return'].astype(float).idxmax()]
+        max_sharpe = portfolios_df.iloc[portfolios_df['Sharpe'].astype(float).idxmax()]
+    except Exception as e:
+        logging.error(f"Error selecting min/max portfolios: {e}")
+        raise
 
     min_risk_weights = min_risk['Weights']
     max_return_weights = max_return['Weights']
@@ -146,32 +174,77 @@ def run_sharpe_ratio(tickers):
     )
 
     average_marker = go.Scatter(
-    x=[average_risk],
-    y=[average_return],
-    mode='markers',
-    marker=dict(color='magenta', size=15, symbol='circle'),
-    name='Average Portfolio'
+        x=[average_risk],
+        y=[average_return],
+        mode='markers',
+        marker=dict(color='magenta', size=15, symbol='circle'),
+        name='Average Portfolio'
     )
 
     layout = go.Layout(
-    title=dict(
-        text=f"Optimized Portfolios for {', '.join(tickers)}",
-        x=0.5,  # Center the title
-        xanchor='center'
-    ),
-    xaxis=dict(title="Volatility (Risk)"),
-    yaxis=dict(title="Returns"),
-    legend=dict(x=0, y=1),
-    hovermode='closest',
-    autosize=True,
-)
+        title=dict(
+            text=f"Optimized Portfolios for {', '.join(tickers)}",
+            x=0.5,  # Center the title
+            xanchor='center'
+        ),
+        xaxis=dict(title="Volatility (Risk)"),
+        yaxis=dict(title="Returns"),
+        legend=dict(x=0, y=1),
+        hovermode='closest',
+        autosize=True,
+    )
 
     fig = go.Figure(data=[scatter, max_sharpe_marker, max_return_marker, min_risk_marker, average_marker], layout=layout)
     graph_json = pio.to_json(fig)
 
-    return {'graph': graph_json, 'text': text_output}
+    # Calculate the cumulative returns for the new portfolios and benchmarks
+    data = pd.DataFrame()
+    for ticker in list(tickers) + ['SPY', 'QQQ', 'DIA']:
+        stock = yf.Ticker(ticker)
+        try:
+            hist = stock.history(start=earliest_start_date, end=end_date)
+            hist.index = hist.index.tz_convert('UTC').normalize()
+            hist[ticker] = hist['Close'].pct_change()
+            if data.empty:
+                data = hist[[ticker]]
+            else:
+                data = data.join(hist[[ticker]], how='outer')
+            logging.info(f"Fetched data for {ticker}")
+        except Exception as e:
+            logging.error(f"Could not fetch data for {ticker}: {e}")
 
-if __name__ == '__main__':
-    tickers = []
-    result = run_sharpe_ratio(tickers)
-    print(result['text'])
+    data = data.dropna()
+
+    fig2 = go.Figure()
+
+    portfolio_names = ['Minimum Risk Portfolio', 'Maximum Return Portfolio', 'Maximum Sharpe Ratio Portfolio', 'Average Portfolio']
+    portfolios = {
+        'Minimum Risk Portfolio': min_risk_weights,
+        'Maximum Return Portfolio': max_return_weights,
+        'Maximum Sharpe Ratio Portfolio': max_sharpe['Weights'],
+        'Average Portfolio': average_weights
+    }
+
+    for portfolio_name, weights in portfolios.items():
+        portfolio_return = (data[tickers] * weights).sum(axis=1)
+        cumulative_portfolio_return = (1 + portfolio_return).cumprod() * 10000
+        fig2.add_trace(go.Scatter(x=cumulative_portfolio_return.index, y=cumulative_portfolio_return, mode='lines', name=portfolio_name))
+
+    for benchmark in ['SPY', 'QQQ', 'DIA']:
+        cumulative_benchmark_return = (1 + data[benchmark]).cumprod() * 10000
+        fig2.add_trace(go.Scatter(x=cumulative_benchmark_return.index, y=cumulative_benchmark_return, mode='lines', name=benchmark))
+
+    fig2.update_layout(
+        title={
+            'text': 'Portfolio Performance Comparison of $10,000',
+            'x': 0.5,  # Center the title
+            'xanchor': 'center'
+        },
+        xaxis_title='Date',
+        yaxis_title='Value',
+        yaxis_type="log",
+    )
+
+    performance_graph = pio.to_json(fig2)
+
+    return {'graph': graph_json, 'text': text_output, 'performance_graph': performance_graph}
