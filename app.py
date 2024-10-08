@@ -1,7 +1,7 @@
-from flask import Flask, render_template, redirect, url_for, request, jsonify
+from flask import Flask, json, render_template, redirect, url_for, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
-import requests
+import plotly.figure_factory as ff
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import importlib.util
@@ -15,7 +15,6 @@ import plotly.graph_objs as go
 import plotly.io as pio
 from datetime import datetime, timedelta
 import tradingeconomics as te
-import time
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
@@ -218,69 +217,6 @@ def run_sharpe_ratio():
     result = func(tickers_list)
     return jsonify(result)
 
-@app.route('/investment_growth')
-def investment_growth():
-    return render_template('investment_growth.html')
-
-@app.route('/run_investment_growth', methods=['POST'])
-def run_investment_growth():
-    tickers = request.json.get('tickers')
-    start_date = request.json.get('start_date')
-    monthly_investment = request.json.get('monthly_investment')
-
-    if not tickers or not start_date or not monthly_investment:
-        return jsonify({"error": "Please provide valid tickers, start date, and monthly investment."}), 400
-
-    script_path = os.path.join(BASE_DIR, 'programs', 'Investment_Growth.py')
-    spec = importlib.util.spec_from_file_location("investment_growth", script_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    func = getattr(module, 'run_investment_growth')
-
-    graph_json, summary, cumulative_investment, cumulative_total_value = func(tickers, start_date, monthly_investment)
-    return jsonify({"graph": graph_json, "summary": summary, "cumulative_investment": cumulative_investment, "cumulative_total_value": cumulative_total_value})
-
-@app.route('/stock_price_performance')
-def stock_price_performance():
-    return render_template('stock_price_performance.html')
-
-@app.route('/generate_stock_graph', methods=['POST'])
-def generate_stock_graph():
-    tickers = request.json.get('tickers')
-    start_date = request.json.get('start_date')
-
-    if not tickers or not start_date:
-        return jsonify({"error": "Please provide valid tickers and start date."}), 400
-
-    tickers_list = [ticker.strip().upper() for ticker in tickers.split(',')]
-    start_date = pd.Timestamp(start_date)
-
-    data = []
-    for ticker in tickers_list:
-        stock_data = yf.download(ticker, start=start_date)
-        if not stock_data.empty:
-            stock_data['Cumulative Percent Change'] = ((stock_data['Adj Close'] / stock_data['Adj Close'].iloc[0]) - 1) * 100
-            trace = go.Scatter(
-                x=stock_data.index,
-                y=stock_data['Cumulative Percent Change'],
-                mode='lines',
-                name=ticker
-            )
-            data.append(trace)
-
-    layout = go.Layout(
-        title=f'Stock Price Performance since {start_date.strftime("%Y-%m-%d")}',
-        xaxis=dict(title='Date'),
-        yaxis=dict(title='Cumulative Percent Change (%)', side='right'),
-        legend=dict(x=0, y=1),
-        hovermode='closest'
-    )
-
-    fig = go.Figure(data=data, layout=layout)
-    graph_json = pio.to_json(fig)
-
-    return jsonify({"graph": graph_json})
-
 def run_script(script_path, function_name, stock, start_date):
     spec = importlib.util.spec_from_file_location("regression", script_path)
     module = importlib.util.module_from_spec(spec)
@@ -398,7 +334,116 @@ def run_portfolio_comparison():
     result = func(filtered_tickers, filtered_allocations, benchmark, start_date)
     return jsonify(result)
 
+@app.route('/dcf_calculator', methods=['GET'])
+def dcf():
+    return render_template('dcf_calculator.html')
+
+# Fetch DCF data and financials
+@app.route('/fetch_dcf_data', methods=['POST'])
+def fetch_dcf_data():
+    data = request.json
+    ticker = data.get('ticker')
+
+    # Load dcf.py dynamically
+    script_path = os.path.join(BASE_DIR, 'programs', 'DCF.py')
+    spec = importlib.util.spec_from_file_location("dcf", script_path)
+    dcf_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(dcf_module)
+
+    # Call the function from dcf.py
+    return dcf_module.fetch_dcf_data_route(data)
+
+# Run DCF Calculation
+@app.route('/calculate_dcf', methods=['POST'])
+def calculate_dcf():
+    data = request.json
+
+    # Load dcf.py dynamically
+    script_path = os.path.join(BASE_DIR, 'programs', 'DCF.py')
+    spec = importlib.util.spec_from_file_location("dcf", script_path)
+    dcf_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(dcf_module)
+
+    # Call the function from dcf.py
+    return dcf_module.calculate_dcf_route(data)
+
+
+@app.route('/investment_tracker')
+def unified_stock_tracker():
+    return render_template('Investment_Tracker.html')
+
+@app.route('/run_investment_tracker', methods=['POST'])
+def run_stock_tracker():
+    tickers = request.json.get('tickers')
+    start_date = request.json.get('start_date')
+    monthly_investment = request.json.get('monthly_investment', None)  # Optional
+
+    if not tickers or not start_date:
+        return jsonify({"error": "Please provide valid tickers and start date."}), 400
+
+    # Dynamically load the Unified_Stock_Tracker.py script
+    script_path = os.path.join(BASE_DIR, 'programs', 'Investment_Tracker.py')
+    spec = importlib.util.spec_from_file_location("Unified_Stock_Tracker", script_path)
+    unified_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(unified_module)
+
+    # Call the run_stock_tracker function
+    response = unified_module.run_stock_tracker(tickers, start_date, monthly_investment)
+
+    if "error" in response:
+        return jsonify({"error": response["error"]}), 400
+
+    # Return the entire response, which includes graph, summary, and totals
+    return jsonify({
+        "graph": response["graph"],
+        "summary": response["summary"],
+        "cumulative_investment": response["cumulative_investment"],
+        "cumulative_total_value": response["cumulative_total_value"]
+    })
+
+@app.route('/correlation_matrix')
+def correlation_matrix():
+    # Define default tickers and date range
+    DEFAULT_TICKERS = ['AAPL', 'AMZN', 'GOOGL', 'TSLA', 'BTC-USD', 'ETH-USD', 'GC=F', 'SI=F', 'PL=F', 'PA=F', 'DX-Y.NYB', 'NVDA', 'MSFT', 'META', '^SPX', '^NDX', '^DJI']
+    start_date = '1950-01-01'
+    end_date = pd.Timestamp.today().strftime('%Y-%m-%d')
+
+    # Dynamically load the Correlation_Matrix.py script
+    script_path = os.path.join(BASE_DIR, 'programs', 'Correlation_Matrix.py')
+    spec = importlib.util.spec_from_file_location("Correlation_Matrix", script_path)
+    correlation_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(correlation_module)
+
+    # Call the compute_correlation_matrix function from the loaded module
+    graph_json = correlation_module.compute_correlation_matrix(','.join(DEFAULT_TICKERS), start_date, end_date)
+
+    # Pass the JSON safely to the template
+    return render_template('correlation_matrix.html', default_graph=json.loads(graph_json))
+
+# Correlation matrix API for user-defined tickers
+@app.route('/compute_correlation', methods=['POST'])
+def compute_correlation():
+    data = request.get_json()
+    tickers = data.get('tickers', '')
+    start_date = '1950-01-01'  # Fixed start date
+    end_date = pd.Timestamp.today().strftime('%Y-%m-%d')  # Current date
+
+    # Dynamically load the Correlation_Matrix.py script
+    script_path = os.path.join(BASE_DIR, 'programs', 'Correlation_Matrix.py')
+    spec = importlib.util.spec_from_file_location("Correlation_Matrix", script_path)
+    correlation_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(correlation_module)
+
+    # Call the compute_correlation_matrix function from the loaded module
+    graph_json = correlation_module.compute_correlation_matrix(tickers, start_date, end_date)
+
+    if graph_json:
+        return jsonify({'graph': graph_json})
+    else:
+        return jsonify({'error': 'Unable to compute correlation matrix. Please check the input data.'})
+
+
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(host='0.0.0.0', port=8000)
+    app.run(host='0.0.0.0', debug=True, port=5020)
